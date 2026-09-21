@@ -1,0 +1,142 @@
+openapi: 3.0.3
+info:
+  title: Sail-Racing Server API
+  version: "1"
+paths:
+  /api/races:
+    post:
+      summary: Replicate a race from the committee app
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: 'race.schema.json'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  raceId: { type: string, format: uuid }
+                  joinCode: { type: string }
+  /api/races/{id}:
+    get:
+      summary: Get full race state
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: 'race.schema.json'
+    put:
+      summary: Full update of a race
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: 'race.schema.json'
+      responses:
+        '200':
+          description: OK
+  /api/races/by-code/{code}:
+    get:
+      summary: Get a race by its competitor join code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: 'race.schema.json'
+  /api/races/{id}/shorten-course:
+    patch:
+      summary: Reduce laps for some or all boats mid-race
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newLaps:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      participantId: { type: string, format: uuid }
+                      laps: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /api/races/{id}/start-sequence:
+    post:
+      summary: Record T0 of the start sequence
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startAt: { type: string, format: date-time }
+      responses:
+        '200':
+          description: OK
+  /api/races/{id}/all-clear:
+    post:
+      summary: Move race status to Racing and activate lap-counting
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      responses:
+        '200':
+          description: OK
+  /api/races/{id}/results:
+    post:
+      summary: Publish results for a race
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: 'result.schema.json'
+      responses:
+        '201':
+          description: Created
+    get:
+      summary: Get published results
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: 'result.schema.json'
+components:
+  parameters:
+    RaceId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }

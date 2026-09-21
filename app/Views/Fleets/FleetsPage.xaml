@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SailRacing.ViewModels"
+             xmlns:models="clr-namespace:SailRacing.Models"
+             x:Class="SailRacing.Views.Fleets.FleetsPage"
+             x:DataType="vm:FleetsViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*" Padding="12" RowSpacing="12">
+
+        <Border Grid.Row="0" IsVisible="{Binding IsEditing}" Padding="12" Stroke="Gray" StrokeShape="RoundRectangle 8">
+            <VerticalStackLayout Spacing="8">
+                <Entry Placeholder="Fleet name" Text="{Binding EditName}" />
+                <Label Text="Members" FontAttributes="Bold" />
+                <CollectionView ItemsSource="{Binding EditParticipants}" HeightRequest="180">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectableParticipant">
+                            <HorizontalStackLayout Spacing="8" Padding="4">
+                                <CheckBox IsChecked="{Binding IsSelected}" />
+                                <Label Text="{Binding Name}" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Save" Command="{Binding SaveCommand}" />
+                    <Button Text="Cancel" Command="{Binding CancelEditCommand}" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+
+        <RefreshView Grid.Row="1" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
+            <CollectionView ItemsSource="{Binding Fleets}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Fleet">
+                        <Grid Padding="8" ColumnDefinitions="*,Auto,Auto">
+                            <Label Grid.Column="0" Text="{Binding Name}" FontAttributes="Bold" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="Edit"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FleetsViewModel}}, Path=EditCommand}"
+                                    CommandParameter="{Binding .}" />
+                            <Button Grid.Column="2" Text="Delete"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FleetsViewModel}}, Path=DeleteCommand}"
+                                    CommandParameter="{Binding .}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <Button Grid.Row="1" Text="+" VerticalOptions="End" HorizontalOptions="End"
+                WidthRequest="56" HeightRequest="56" CornerRadius="28"
+                Command="{Binding AddNewCommand}" Margin="0,0,12,12" />
+    </Grid>
+</ContentPage>

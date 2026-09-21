@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SailRacing.ViewModels"
+             x:Class="SailRacing.Views.Race.ResultsPage"
+             x:DataType="vm:ResultsViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="*,Auto,Auto" Padding="12" RowSpacing="8">
+        <CollectionView Grid.Row="0" ItemsSource="{Binding Results}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ResultsEntry">
+                    <Grid ColumnDefinitions="Auto,*,Auto" Padding="8">
+                        <Label Grid.Column="0" Text="{Binding Rank}" FontAttributes="Bold" WidthRequest="32" />
+                        <Label Grid.Column="1" Text="{Binding ParticipantName}" />
+                        <Label Grid.Column="2" Text="{Binding Status}" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Label Grid.Row="1" Text="{Binding StatusMessage}" TextColor="Gray" />
+        <Button Grid.Row="2" Text="Publish Results" Command="{Binding PublishCommand}" />
+    </Grid>
+</ContentPage>

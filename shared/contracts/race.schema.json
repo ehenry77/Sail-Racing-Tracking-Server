@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Race",
+  "type": "object",
+  "required": ["id", "contractVersion", "name", "fleet", "startLine", "buoys", "raceParticipants", "status"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid", "description": "Client-generated id from the committee app" },
+    "contractVersion": { "type": "integer", "const": 1 },
+    "joinCode": { "type": "string", "description": "Server-assigned short code competitors use to join, e.g. /race/:joinCode" },
+    "name": { "type": "string" },
+    "status": { "type": "string", "enum": ["Setup", "StartSequence", "Racing", "Finished"] },
+    "fleet": { "$ref": "fleet.schema.json" },
+    "startLine": { "$ref": "start-line.schema.json" },
+    "finishSameAsStart": { "type": "boolean", "default": true },
+    "finishLatitude": { "type": ["number", "null"] },
+    "finishLongitude": { "type": ["number", "null"] },
+    "buoys": {
+      "type": "array",
+      "items": { "$ref": "buoy.schema.json" }
+    },
+    "lapsDefault": { "type": "integer", "minimum": 1 },
+    "raceParticipants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["participantId", "laps"],
+        "properties": {
+          "participantId": { "type": "string", "format": "uuid" },
+          "laps": { "type": "integer", "minimum": 1 },
+          "lapsCompleted": { "type": "integer", "minimum": 0, "default": 0 },
+          "isOnFinalLap": { "type": "boolean", "default": false },
+          "status": { "type": "string", "enum": ["Racing", "Finished", "DNF", "DNS", "RET", "OCS"], "default": "Racing" },
+          "finishTime": { "type": ["string", "null"], "format": "date-time" },
+          "elapsedSeconds": { "type": ["number", "null"] },
+          "correctedSeconds": { "type": ["number", "null"] },
+          "rank": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "startAt": { "type": ["string", "null"], "format": "date-time", "description": "T0 of the start sequence, authoritative for elapsed-time math" },
+    "shortenCourseAppliedAt": { "type": ["string", "null"], "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

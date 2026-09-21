@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SailRacing.ViewModels"
+             x:Class="SailRacing.Views.Race.StartSequencePage"
+             x:DataType="vm:StartSequenceViewModel"
+             Title="{Binding Title}">
+
+    <VerticalStackLayout Padding="24" Spacing="24" VerticalOptions="Center">
+
+        <Label Text="{Binding CountdownText}" FontSize="64" HorizontalOptions="Center" />
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+            <Border Grid.Column="0" Padding="16" Stroke="Gray" StrokeShape="RoundRectangle 8">
+                <VerticalStackLayout HorizontalOptions="Center">
+                    <Label Text="Class flag" HorizontalOptions="Center" />
+                    <Label Text="{Binding ClassFlagUp, StringFormat='{0}'}" FontAttributes="Bold" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Grid.Column="1" Padding="16" Stroke="Gray" StrokeShape="RoundRectangle 8">
+                <VerticalStackLayout HorizontalOptions="Center">
+                    <Label Text="P flag" HorizontalOptions="Center" />
+                    <Label Text="{Binding PFlagUp, StringFormat='{0}'}" FontAttributes="Bold" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <Button Text="Begin Start Sequence" Command="{Binding BeginSequenceCommand}"
+                IsVisible="{Binding IsSequenceStarted, Converter={StaticResource InvertedBoolConverter}}" />
+
+        <Label Text="Sequence complete — awaiting All Clear" IsVisible="{Binding IsSequenceComplete}"
+               HorizontalOptions="Center" />
+
+        <Button Text="All Clear — Start Race Mode" Command="{Binding AllClearCommand}"
+                IsVisible="{Binding IsSequenceComplete}" BackgroundColor="Green" TextColor="White" />
+
+    </VerticalStackLayout>
+</ContentPage>

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Buoy",
+  "type": "object",
+  "required": ["id", "sequence", "name", "latitude", "longitude"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "sequence": { "type": "integer", "minimum": 0, "description": "Order of this mark in the course" },
+    "name": { "type": "string" },
+    "latitude": { "type": "number" },
+    "longitude": { "type": "number" },
+    "capturedViaGps": { "type": "boolean" }
+  }
+}

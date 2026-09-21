@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StartLine",
+  "type": "object",
+  "required": ["committeeLatitude", "committeeLongitude", "pinLatitude", "pinLongitude"],
+  "properties": {
+    "committeeLatitude": { "type": "number" },
+    "committeeLongitude": { "type": "number" },
+    "pinLatitude": { "type": "number" },
+    "pinLongitude": { "type": "number" }
+  }
+}

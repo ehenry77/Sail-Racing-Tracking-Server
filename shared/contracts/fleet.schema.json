@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fleet",
+  "type": "object",
+  "required": ["id", "name", "participantIds"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string" },
+    "participantIds": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

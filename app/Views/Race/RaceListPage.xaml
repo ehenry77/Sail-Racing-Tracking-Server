@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SailRacing.ViewModels"
+             xmlns:models="clr-namespace:SailRacing.Models"
+             x:Class="SailRacing.Views.Race.RaceListPage"
+             x:DataType="vm:RaceListViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="*" Padding="12">
+        <RefreshView Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
+            <CollectionView ItemsSource="{Binding Races}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Race">
+                        <Grid Padding="8" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0">
+                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                <Label Text="{Binding Status}" FontSize="12" />
+                            </VerticalStackLayout>
+                            <Button Grid.Column="1" Text="Open"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RaceListViewModel}}, Path=OpenCommand}"
+                                    CommandParameter="{Binding .}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <Button Text="+ New Race" VerticalOptions="End" HorizontalOptions="End"
+                Command="{Binding NewRaceCommand}" Margin="0,0,0,12" />
+    </Grid>
+</ContentPage>

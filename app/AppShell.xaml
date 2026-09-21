@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="SailRacing.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:competitors="clr-namespace:SailRacing.Views.Competitors"
+    xmlns:fleets="clr-namespace:SailRacing.Views.Fleets"
+    xmlns:race="clr-namespace:SailRacing.Views.Race"
+    Shell.FlyoutBehavior="Disabled"
+    Title="SailRacing">
+
+    <TabBar>
+        <ShellContent
+            Title="Competitors"
+            ContentTemplate="{DataTemplate competitors:CompetitorsPage}"
+            Route="competitors" />
+
+        <ShellContent
+            Title="Fleets"
+            ContentTemplate="{DataTemplate fleets:FleetsPage}"
+            Route="fleets" />
+
+        <ShellContent
+            Title="Race"
+            ContentTemplate="{DataTemplate race:RaceListPage}"
+            Route="races" />
+    </TabBar>
+
+</Shell>

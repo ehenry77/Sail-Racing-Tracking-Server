@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Participant",
+  "type": "object",
+  "required": ["id", "name", "helm", "tcf"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string" },
+    "helm": { "type": "string" },
+    "tcf": { "type": "number", "description": "Time Correction Factor used for corrected-time scoring" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}
