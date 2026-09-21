@@ -87,3 +87,15 @@ secrets.json
 
 ## Claude Code local state
 .claude/
+
+## Node.js / server
+node_modules/
+dist/
+*.log
+npm-debug.log*
+server/*.db
+server/*.db-journal
+server/*.db-wal
+server/*.db-shm
+.env
+.env.local

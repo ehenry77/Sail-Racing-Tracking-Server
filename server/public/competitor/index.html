@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sail-Racing — Track me</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    max-width: 480px;
+    margin-inline: auto;
+    background: #0b1220;
+    color: #eef2f7;
+  }
+  h1 { font-size: 1.25rem; margin-bottom: 4px; }
+  p.sub { color: #9aa7b8; margin-top: 0; }
+  .card {
+    background: #131c2e;
+    border: 1px solid #24304a;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  button, .roster-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #1c2740;
+    color: #eef2f7;
+    border: 1px solid #2c3a58;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .roster-item:active, button:active { background: #24304a; }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #666; }
+  .dot.live { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+  .dot.stale { background: #e67e22; }
+  .dot.off { background: #e74c3c; }
+  #error { color: #ff6b6b; }
+  #hero { display: none; }
+</style>
+</head>
+<body>
+  <h1 id="raceName">Sail-Racing</h1>
+  <p class="sub" id="raceSub">Loading race…</p>
+
+  <div id="error"></div>
+
+  <div class="card" id="rosterCard">
+    <p><strong>Who are you?</strong></p>
+    <div id="roster"></div>
+  </div>
+
+  <div class="card" id="hero">
+    <p class="status"><span class="dot" id="statusDot"></span><span id="statusText">Not tracking</span></p>
+    <p class="sub" id="boatLabel"></p>
+    <button id="stopBtn" style="background:#3a1c1c;border-color:#5a2c2c;">Stop tracking</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
