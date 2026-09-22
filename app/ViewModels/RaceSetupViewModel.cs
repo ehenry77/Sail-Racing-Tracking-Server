@@ -39,6 +39,15 @@ public partial class RaceSetupViewModel : BaseViewModel
     private string lapsDefaultText = "3";
 
     [ObservableProperty]
+    private bool hasScheduledStartTime;
+
+    [ObservableProperty]
+    private DateTime scheduledStartDate = DateTime.Today;
+
+    [ObservableProperty]
+    private TimeSpan scheduledStartTimeOfDay = RoundToNextMinute(DateTime.Now.TimeOfDay);
+
+    [ObservableProperty]
     private string committeeLatitudeText = string.Empty;
 
     [ObservableProperty]
@@ -87,6 +96,18 @@ public partial class RaceSetupViewModel : BaseViewModel
                 RaceName = _race.Name;
                 LapsDefaultText = _race.LapsDefault.ToString();
                 FinishSameAsStart = _race.FinishSameAsStart;
+
+                if (_race.ScheduledStartTime is { } scheduled)
+                {
+                    var local = scheduled.ToLocalTime();
+                    HasScheduledStartTime = true;
+                    ScheduledStartDate = local.Date;
+                    ScheduledStartTimeOfDay = local.TimeOfDay;
+                }
+                else
+                {
+                    HasScheduledStartTime = false;
+                }
                 CommitteeLatitudeText = FormatOrEmpty(aggregate.StartLine.CommitteeLatitude);
                 CommitteeLongitudeText = FormatOrEmpty(aggregate.StartLine.CommitteeLongitude);
                 PinLatitudeText = FormatOrEmpty(aggregate.StartLine.PinLatitude);
@@ -234,6 +255,16 @@ public partial class RaceSetupViewModel : BaseViewModel
             _race.LapsDefault = int.TryParse(LapsDefaultText, out var laps) ? laps : 3;
             _race.FinishSameAsStart = FinishSameAsStart;
 
+            if (HasScheduledStartTime)
+            {
+                var local = ScheduledStartDate.Date + ScheduledStartTimeOfDay;
+                _race.ScheduledStartTime = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
+            }
+            else
+            {
+                _race.ScheduledStartTime = null;
+            }
+
             var aggregate = new Data.RaceAggregate
             {
                 Race = _race,
@@ -289,4 +320,6 @@ public partial class RaceSetupViewModel : BaseViewModel
     private static double? ParseOrNull(string text) => double.TryParse(text, out var value) ? value : null;
 
     private static string FormatOrEmpty(double? value) => value?.ToString("0.######") ?? string.Empty;
+
+    private static TimeSpan RoundToNextMinute(TimeSpan t) => TimeSpan.FromMinutes(Math.Ceiling(t.TotalMinutes));
 }

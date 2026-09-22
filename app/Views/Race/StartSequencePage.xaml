@@ -9,6 +9,8 @@
     <VerticalStackLayout Padding="24" Spacing="24" VerticalOptions="Center">
 
         <Label Text="{Binding CountdownText}" FontSize="64" HorizontalOptions="Center" />
+        <Label Text="{Binding StartAtText}" FontSize="18" HorizontalOptions="Center" TextColor="Gray"
+               IsVisible="{Binding IsSequenceStarted}" />
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
             <Border Grid.Column="0" Padding="16" Stroke="Gray" StrokeShape="RoundRectangle 8">

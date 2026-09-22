@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
 using SailRacing.Data;
 using SailRacing.Services;
+using SailRacing.Services.Devices;
 using SailRacing.ViewModels;
 using SailRacing.Views.Competitors;
 using SailRacing.Views.Fleets;
 using SailRacing.Views.Race;
+using SailRacing.Views.Settings;
 
 namespace SailRacing;
 
@@ -38,6 +40,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IRaceSyncService, RaceSyncService>();
         builder.Services.AddTransient<IStartSequenceService, StartSequenceService>();
         builder.Services.AddTransient<IRaceSocketClient, RaceSocketClient>();
+        builder.Services.AddSingleton<IDeviceSettingsService, DeviceSettingsService>();
 
         // ViewModels
         builder.Services.AddTransient<CompetitorsViewModel>();
@@ -47,6 +50,7 @@ public static class MauiProgram
         builder.Services.AddTransient<StartSequenceViewModel>();
         builder.Services.AddTransient<TimingSheetViewModel>();
         builder.Services.AddTransient<ResultsViewModel>();
+        builder.Services.AddTransient<SettingsViewModel>();
 
         // Views
         builder.Services.AddTransient<CompetitorsPage>();
@@ -56,6 +60,7 @@ public static class MauiProgram
         builder.Services.AddTransient<StartSequencePage>();
         builder.Services.AddTransient<TimingSheetPage>();
         builder.Services.AddTransient<ResultsPage>();
+        builder.Services.AddTransient<SettingsPage>();
 
         var app = builder.Build();
 

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SailRacing.ViewModels"
+             xmlns:devices="clr-namespace:SailRacing.Services.Devices"
+             x:Class="SailRacing.Views.Settings.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="12" Spacing="20">
+
+            <Label Text="Server" FontAttributes="Bold" />
+            <Entry Placeholder="https://your-server" Text="{Binding ServerBaseUrlText}" />
+
+            <Label Text="Audio output (announcements speaker)" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding AudioOutputDevices}" SelectedItem="{Binding SelectedAudioOutputDevice}">
+                <Picker.ItemDisplayBinding>
+                    <Binding Path="Name" x:DataType="devices:MediaDeviceInfo" />
+                </Picker.ItemDisplayBinding>
+            </Picker>
+
+            <Label Text="Audio input (microphone)" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding AudioInputDevices}" SelectedItem="{Binding SelectedAudioInputDevice}">
+                <Picker.ItemDisplayBinding>
+                    <Binding Path="Name" x:DataType="devices:MediaDeviceInfo" />
+                </Picker.ItemDisplayBinding>
+            </Picker>
+
+            <Label Text="Video input (camera)" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding VideoInputDevices}" SelectedItem="{Binding SelectedVideoInputDevice}">
+                <Picker.ItemDisplayBinding>
+                    <Binding Path="Name" x:DataType="devices:MediaDeviceInfo" />
+                </Picker.ItemDisplayBinding>
+            </Picker>
+
+            <Label Text="Nothing in the app streams audio/video yet — these are saved as preferences for a future feature to use."
+                   FontSize="12" TextColor="Gray" />
+
+            <Label Text="{Binding StatusMessage}" TextColor="Gray" />
+
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Refresh devices" Command="{Binding LoadCommand}" />
+                <Button Text="Save" Command="{Binding SaveCommand}" />
+            </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

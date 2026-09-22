@@ -42,6 +42,8 @@
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
     <DeviceCapability Name="location" />
+    <DeviceCapability Name="microphone" />
+    <DeviceCapability Name="webcam" />
     <Capability Name="internetClient" />
   </Capabilities>
 

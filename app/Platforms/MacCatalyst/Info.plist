@@ -36,5 +36,9 @@
 	<string>Assets.xcassets/appicon.appiconset</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Sail-Racing uses your location to capture buoy and start-line positions when setting up a race course.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sail-Racing lists available microphones in Settings for a future audio feature.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Sail-Racing lists available cameras in Settings for a future video feature.</string>
 </dict>
 </plist>

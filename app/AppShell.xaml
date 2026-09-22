@@ -6,6 +6,7 @@
     xmlns:competitors="clr-namespace:SailRacing.Views.Competitors"
     xmlns:fleets="clr-namespace:SailRacing.Views.Fleets"
     xmlns:race="clr-namespace:SailRacing.Views.Race"
+    xmlns:settings="clr-namespace:SailRacing.Views.Settings"
     Shell.FlyoutBehavior="Disabled"
     Title="SailRacing">
 
@@ -24,6 +25,11 @@
             Title="Race"
             ContentTemplate="{DataTemplate race:RaceListPage}"
             Route="races" />
+
+        <ShellContent
+            Title="Settings"
+            ContentTemplate="{DataTemplate settings:SettingsPage}"
+            Route="settings" />
     </TabBar>
 
 </Shell>

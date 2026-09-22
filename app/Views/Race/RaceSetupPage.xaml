@@ -17,6 +17,15 @@
 
             <Entry Placeholder="Default laps" Text="{Binding LapsDefaultText}" Keyboard="Numeric" />
 
+            <HorizontalStackLayout Spacing="8">
+                <CheckBox IsChecked="{Binding HasScheduledStartTime}" />
+                <Label Text="Scheduled start time" VerticalOptions="Center" />
+            </HorizontalStackLayout>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding HasScheduledStartTime}">
+                <DatePicker Grid.Column="0" Date="{Binding ScheduledStartDate}" />
+                <TimePicker Grid.Column="1" Time="{Binding ScheduledStartTimeOfDay}" />
+            </Grid>
+
             <Label Text="Start line" FontAttributes="Bold" />
             <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <Entry Grid.Column="0" Placeholder="Committee lat" Text="{Binding CommitteeLatitudeText}" />

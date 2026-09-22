@@ -32,6 +32,9 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     [ObservableProperty]
     private bool isSequenceStarted;
 
+    [ObservableProperty]
+    private string startAtText = string.Empty;
+
     public StartSequenceViewModel(IRaceRepository races, IStartSequenceService sequence, ISailRacingApiClient api)
     {
         _races = races;
@@ -54,6 +57,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         if (_race?.StartAt is not null)
         {
             IsSequenceStarted = true;
+            StartAtText = FormatStartAt(_race.StartAt.Value);
             _sequence.Start(_race.StartAt.Value);
         }
     }
@@ -66,7 +70,12 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        _race.StartAt = DateTimeOffset.UtcNow;
+        // Use the scheduled start time if one was set during setup and it's still ahead of us;
+        // otherwise the standard "gun in 10 minutes from right now" sequence.
+        var now = DateTimeOffset.UtcNow;
+        _race.StartAt = _race.ScheduledStartTime is { } scheduled && scheduled > now
+            ? scheduled
+            : now.AddMinutes(10);
         _race.Status = RaceStatus.StartSequence;
 
         var aggregate = await _races.GetAggregateAsync(_race.Id);
@@ -77,6 +86,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         }
 
         IsSequenceStarted = true;
+        StartAtText = FormatStartAt(_race.StartAt.Value);
         _sequence.Start(_race.StartAt.Value);
 
         try
@@ -132,6 +142,8 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
                 : $"+{t.Negate():mm\\:ss}";
         });
     }
+
+    private static string FormatStartAt(DateTimeOffset startAt) => $"Start signal at {startAt.ToLocalTime():HH:mm:ss}";
 
     public void Dispose()
     {
