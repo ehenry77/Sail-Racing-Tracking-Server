@@ -22,16 +22,16 @@ export interface BuoyDto {
   id: string;
   sequence: number;
   name: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   capturedViaGps: boolean;
 }
 
 export interface StartLineDto {
-  committeeLatitude: number;
-  committeeLongitude: number;
-  pinLatitude: number;
-  pinLongitude: number;
+  committeeLatitude: number | null;
+  committeeLongitude: number | null;
+  pinLatitude: number | null;
+  pinLongitude: number | null;
 }
 
 export interface RaceParticipantDto {

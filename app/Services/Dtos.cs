@@ -24,17 +24,17 @@ public class BuoyDto
     public string Id { get; set; } = string.Empty;
     public int Sequence { get; set; }
     public string Name { get; set; } = string.Empty;
-    public double Latitude { get; set; }
-    public double Longitude { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public bool CapturedViaGps { get; set; }
 }
 
 public class StartLineDto
 {
-    public double CommitteeLatitude { get; set; }
-    public double CommitteeLongitude { get; set; }
-    public double PinLatitude { get; set; }
-    public double PinLongitude { get; set; }
+    public double? CommitteeLatitude { get; set; }
+    public double? CommitteeLongitude { get; set; }
+    public double? PinLatitude { get; set; }
+    public double? PinLongitude { get; set; }
 }
 
 public class RaceParticipantDto

@@ -49,22 +49,38 @@ export function processPosition(
   const events: TrackerEvent[] = [];
   const marks = race.buoys;
 
-  const lineA: LatLon = { lat: race.startLine.committeeLatitude, lon: race.startLine.committeeLongitude };
-  const lineB: LatLon = { lat: race.startLine.pinLatitude, lon: race.startLine.pinLongitude };
+  const lineA: LatLon | null =
+    race.startLine.committeeLatitude != null && race.startLine.committeeLongitude != null
+      ? { lat: race.startLine.committeeLatitude, lon: race.startLine.committeeLongitude }
+      : null;
+  const lineB: LatLon | null =
+    race.startLine.pinLatitude != null && race.startLine.pinLongitude != null
+      ? { lat: race.startLine.pinLatitude, lon: race.startLine.pinLongitude }
+      : null;
   const finishIsLine = race.finishSameAsStart || race.finishLatitude == null || race.finishLongitude == null;
   const finishPoint: LatLon | null = finishIsLine
     ? null
     : { lat: race.finishLatitude as number, lon: race.finishLongitude as number };
+  // A start/finish line with either endpoint not yet captured can't be tested for a crossing at all.
+  const finishLineReady = !finishIsLine || (lineA != null && lineB != null);
 
   if (state.currentTargetIndex < marks.length) {
     const mark = marks[state.currentTargetIndex];
-    const dist = haversineMeters(position, { lat: mark.latitude, lon: mark.longitude });
-    if (dist <= MARK_RADIUS_METERS) {
+    if (mark.latitude == null || mark.longitude == null) {
+      // No coordinates captured for this mark yet — can't gate on it, so let the boat proceed to
+      // the next target rather than getting stuck waiting for a GPS test that can never pass.
       state.currentTargetIndex += 1;
+    } else {
+      const dist = haversineMeters(position, { lat: mark.latitude, lon: mark.longitude });
+      if (dist <= MARK_RADIUS_METERS) {
+        state.currentTargetIndex += 1;
+      }
     }
+  } else if (!finishLineReady) {
+    // Start/finish line incomplete: lap counting can't run until it's captured. Leave state as-is.
   } else {
     const crossed = finishIsLine
-      ? state.armed && segmentsIntersect(prev, position, lineA, lineB)
+      ? state.armed && segmentsIntersect(prev, position, lineA!, lineB!)
       : state.armed && haversineMeters(position, finishPoint!) <= MARK_RADIUS_METERS;
 
     if (crossed) {
@@ -101,7 +117,7 @@ export function processPosition(
       }
     } else if (!state.armed) {
       const distFromFinish = finishIsLine
-        ? distanceToSegmentMeters(position, lineA, lineB)
+        ? distanceToSegmentMeters(position, lineA!, lineB!)
         : haversineMeters(position, finishPoint!);
       if (distFromFinish > LINE_DISARM_DISTANCE_METERS) {
         state.armed = true;

@@ -81,16 +81,24 @@
 
     const bounds = [];
 
-    const startLineLatLngs = [
-      [race.startLine.committeeLatitude, race.startLine.committeeLongitude],
-      [race.startLine.pinLatitude, race.startLine.pinLongitude]
-    ];
-    if (startLineLatLngs.every(([lat, lon]) => lat !== 0 || lon !== 0)) {
+    const hasStartLine =
+      race.startLine.committeeLatitude != null &&
+      race.startLine.committeeLongitude != null &&
+      race.startLine.pinLatitude != null &&
+      race.startLine.pinLongitude != null;
+    if (hasStartLine) {
+      const startLineLatLngs = [
+        [race.startLine.committeeLatitude, race.startLine.committeeLongitude],
+        [race.startLine.pinLatitude, race.startLine.pinLongitude]
+      ];
       L.polyline(startLineLatLngs, { color: '#f1c40f', weight: 3 }).addTo(map);
       bounds.push(...startLineLatLngs);
     }
 
     for (const buoy of race.buoys) {
+      if (buoy.latitude == null || buoy.longitude == null) {
+        continue; // not yet captured
+      }
       L.circleMarker([buoy.latitude, buoy.longitude], {
         radius: 6,
         color: '#9b59b6',

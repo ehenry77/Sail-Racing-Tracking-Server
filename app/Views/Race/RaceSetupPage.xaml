@@ -64,10 +64,11 @@
             <CollectionView ItemsSource="{Binding RaceParticipants}" HeightRequest="160">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:RaceParticipantEditItem">
-                        <Grid ColumnDefinitions="*,Auto" Padding="4">
-                            <Label Grid.Column="0" Text="{Binding ParticipantName}" VerticalOptions="Center" />
-                            <Entry Grid.Column="1" Text="{Binding LapsText}" Keyboard="Numeric" WidthRequest="60" />
-                        </Grid>
+                        <HorizontalStackLayout Padding="4" Spacing="8">
+                            <Label Text="{Binding ParticipantName}" VerticalOptions="Center" LineBreakMode="TailTruncation" WidthRequest="160" />
+                            <Label Text="Laps:" VerticalOptions="Center" />
+                            <Entry Text="{Binding LapsText}" Keyboard="Numeric" WidthRequest="60" />
+                        </HorizontalStackLayout>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

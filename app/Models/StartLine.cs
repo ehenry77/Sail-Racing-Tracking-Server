@@ -8,11 +8,11 @@ public class StartLine
     [PrimaryKey]
     public string RaceId { get; set; } = string.Empty;
 
-    public double CommitteeLatitude { get; set; }
+    public double? CommitteeLatitude { get; set; }
 
-    public double CommitteeLongitude { get; set; }
+    public double? CommitteeLongitude { get; set; }
 
-    public double PinLatitude { get; set; }
+    public double? PinLatitude { get; set; }
 
-    public double PinLongitude { get; set; }
+    public double? PinLongitude { get; set; }
 }

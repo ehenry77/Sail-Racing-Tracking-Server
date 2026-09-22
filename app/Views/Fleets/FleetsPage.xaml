@@ -7,7 +7,7 @@
              x:DataType="vm:FleetsViewModel"
              Title="{Binding Title}">
 
-    <Grid RowDefinitions="Auto,*" Padding="12" RowSpacing="12">
+    <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="12">
 
         <Border Grid.Row="0" IsVisible="{Binding IsEditing}" Padding="12" Stroke="Gray" StrokeShape="RoundRectangle 8">
             <VerticalStackLayout Spacing="8">
@@ -30,7 +30,15 @@
             </VerticalStackLayout>
         </Border>
 
-        <RefreshView Grid.Row="1" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
+        <VerticalStackLayout Grid.Row="1" Spacing="4">
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Export" Command="{Binding ExportAllCommand}" />
+                <Button Text="Import" Command="{Binding ImportCommand}" />
+            </HorizontalStackLayout>
+            <Label Text="{Binding StatusMessage}" TextColor="Gray" FontSize="12" />
+        </VerticalStackLayout>
+
+        <RefreshView Grid.Row="2" Command="{Binding LoadCommand}" IsRefreshing="{Binding IsBusy}">
             <CollectionView ItemsSource="{Binding Fleets}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Fleet">
@@ -48,7 +56,7 @@
             </CollectionView>
         </RefreshView>
 
-        <Button Grid.Row="1" Text="+" VerticalOptions="End" HorizontalOptions="End"
+        <Button Grid.Row="2" Text="+" VerticalOptions="End" HorizontalOptions="End"
                 WidthRequest="56" HeightRequest="56" CornerRadius="28"
                 Command="{Binding AddNewCommand}" Margin="0,0,12,12" />
     </Grid>

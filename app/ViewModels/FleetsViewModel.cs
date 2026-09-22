@@ -1,13 +1,26 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SailRacing.Data;
 using SailRacing.Models;
+using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
 public partial class FleetsViewModel : BaseViewModel
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
+    private static readonly FilePickerFileType JsonFileType = new(new Dictionary<DevicePlatform, IEnumerable<string>>
+    {
+        { DevicePlatform.iOS, new[] { "public.json" } },
+        { DevicePlatform.Android, new[] { "application/json" } },
+        { DevicePlatform.WinUI, new[] { ".json" } },
+        { DevicePlatform.macOS, new[] { "json" } },
+        { DevicePlatform.MacCatalyst, new[] { "public.json" } }
+    });
+
     private readonly IFleetRepository _fleets;
     private readonly IParticipantRepository _participants;
 
@@ -20,6 +33,9 @@ public partial class FleetsViewModel : BaseViewModel
 
     [ObservableProperty]
     private string editName = string.Empty;
+
+    [ObservableProperty]
+    private string statusMessage = string.Empty;
 
     private string? _editId;
 
@@ -115,5 +131,95 @@ public partial class FleetsViewModel : BaseViewModel
     {
         await _fleets.DeleteAsync(fleet);
         await LoadAsync();
+    }
+
+    [RelayCommand]
+    private async Task ExportAllAsync()
+    {
+        try
+        {
+            var export = new List<FleetExportDto>();
+            foreach (var fleet in Fleets)
+            {
+                var participantIds = await _fleets.GetParticipantIdsAsync(fleet.Id);
+                var participants = await _participants.GetByIdsAsync(participantIds);
+
+                export.Add(new FleetExportDto
+                {
+                    Name = fleet.Name,
+                    Participants = participants
+                        .Select(p => new ParticipantExportDto { Name = p.Name, Helm = p.Helm, Tcf = p.Tcf })
+                        .ToList()
+                });
+            }
+
+            var json = JsonSerializer.Serialize(export, JsonOptions);
+            var filePath = Path.Combine(FileSystem.CacheDirectory, "sail-racing-fleets-export.json");
+            await File.WriteAllTextAsync(filePath, json);
+
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = "Export Fleets",
+                File = new ShareFile(filePath)
+            });
+
+            StatusMessage = $"Exported {export.Count} fleet(s).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ImportAsync()
+    {
+        try
+        {
+            var result = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Import fleets",
+                FileTypes = JsonFileType
+            });
+
+            if (result is null)
+            {
+                return;
+            }
+
+            var json = await File.ReadAllTextAsync(result.FullPath);
+            var imported = JsonSerializer.Deserialize<List<FleetExportDto>>(json, JsonOptions);
+            if (imported is null || imported.Count == 0)
+            {
+                StatusMessage = "No fleets found in that file.";
+                return;
+            }
+
+            foreach (var fleetDto in imported)
+            {
+                var participantIds = new List<string>();
+                foreach (var participantDto in fleetDto.Participants)
+                {
+                    var participant = new Participant
+                    {
+                        Name = participantDto.Name,
+                        Helm = participantDto.Helm,
+                        Tcf = participantDto.Tcf
+                    };
+                    await _participants.SaveAsync(participant);
+                    participantIds.Add(participant.Id);
+                }
+
+                var fleet = new Fleet { Name = fleetDto.Name };
+                await _fleets.SaveAsync(fleet, participantIds);
+            }
+
+            StatusMessage = $"Imported {imported.Count} fleet(s).";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Import failed: {ex.Message}";
+        }
     }
 }

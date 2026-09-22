@@ -15,18 +15,13 @@ public partial class RaceSetupViewModel : BaseViewModel
     private readonly IParticipantRepository _participants;
     private readonly IRaceSyncService _sync;
 
-    private string? _raceId;
     private Race _race = new();
 
-    public string? RaceId
-    {
-        get => _raceId;
-        set
-        {
-            _raceId = value;
-            _ = LoadAsync();
-        }
-    }
+    // Shell sets this via [QueryProperty] before OnAppearing runs, but only when navigating with a
+    // "raceId" query param — for a brand-new race there is none, so loading happens explicitly from
+    // OnAppearingAsync (called by the page) rather than as a side effect of this setter. That also
+    // means the fleet list is refreshed every time the page appears, picking up fleets added elsewhere.
+    public string? RaceId { get; set; }
 
     public ObservableCollection<Fleet> Fleets { get; } = new();
 
@@ -74,7 +69,7 @@ public partial class RaceSetupViewModel : BaseViewModel
         Title = "Race Setup";
     }
 
-    private async Task LoadAsync()
+    public async Task OnAppearingAsync()
     {
         var fleets = await _fleets.GetAllAsync();
         Fleets.Clear();
@@ -92,10 +87,10 @@ public partial class RaceSetupViewModel : BaseViewModel
                 RaceName = _race.Name;
                 LapsDefaultText = _race.LapsDefault.ToString();
                 FinishSameAsStart = _race.FinishSameAsStart;
-                CommitteeLatitudeText = aggregate.StartLine.CommitteeLatitude.ToString("0.######");
-                CommitteeLongitudeText = aggregate.StartLine.CommitteeLongitude.ToString("0.######");
-                PinLatitudeText = aggregate.StartLine.PinLatitude.ToString("0.######");
-                PinLongitudeText = aggregate.StartLine.PinLongitude.ToString("0.######");
+                CommitteeLatitudeText = FormatOrEmpty(aggregate.StartLine.CommitteeLatitude);
+                CommitteeLongitudeText = FormatOrEmpty(aggregate.StartLine.CommitteeLongitude);
+                PinLatitudeText = FormatOrEmpty(aggregate.StartLine.PinLatitude);
+                PinLongitudeText = FormatOrEmpty(aggregate.StartLine.PinLongitude);
 
                 Buoys.Clear();
                 foreach (var buoy in aggregate.Buoys.OrderBy(b => b.Sequence))
@@ -105,8 +100,8 @@ public partial class RaceSetupViewModel : BaseViewModel
                         Id = buoy.Id,
                         Sequence = buoy.Sequence,
                         Name = buoy.Name,
-                        LatitudeText = buoy.Latitude.ToString("0.######"),
-                        LongitudeText = buoy.Longitude.ToString("0.######"),
+                        LatitudeText = FormatOrEmpty(buoy.Latitude),
+                        LongitudeText = FormatOrEmpty(buoy.Longitude),
                         CapturedViaGps = buoy.CapturedViaGps
                     });
                 }
@@ -245,10 +240,10 @@ public partial class RaceSetupViewModel : BaseViewModel
                 StartLine = new StartLine
                 {
                     RaceId = _race.Id,
-                    CommitteeLatitude = ParseOrZero(CommitteeLatitudeText),
-                    CommitteeLongitude = ParseOrZero(CommitteeLongitudeText),
-                    PinLatitude = ParseOrZero(PinLatitudeText),
-                    PinLongitude = ParseOrZero(PinLongitudeText)
+                    CommitteeLatitude = ParseOrNull(CommitteeLatitudeText),
+                    CommitteeLongitude = ParseOrNull(CommitteeLongitudeText),
+                    PinLatitude = ParseOrNull(PinLatitudeText),
+                    PinLongitude = ParseOrNull(PinLongitudeText)
                 },
                 Buoys = Buoys.Select(b => new Buoy
                 {
@@ -256,8 +251,8 @@ public partial class RaceSetupViewModel : BaseViewModel
                     RaceId = _race.Id,
                     Sequence = b.Sequence,
                     Name = b.Name,
-                    Latitude = ParseOrZero(b.LatitudeText),
-                    Longitude = ParseOrZero(b.LongitudeText),
+                    Latitude = ParseOrNull(b.LatitudeText),
+                    Longitude = ParseOrNull(b.LongitudeText),
                     CapturedViaGps = b.CapturedViaGps
                 }).ToList(),
                 RaceParticipants = RaceParticipants.Select(rp => new Models.RaceParticipant
@@ -291,5 +286,7 @@ public partial class RaceSetupViewModel : BaseViewModel
         await Shell.Current.GoToAsync($"startSequence?raceId={_race.Id}");
     }
 
-    private static double ParseOrZero(string text) => double.TryParse(text, out var value) ? value : 0;
+    private static double? ParseOrNull(string text) => double.TryParse(text, out var value) ? value : null;
+
+    private static string FormatOrEmpty(double? value) => value?.ToString("0.######") ?? string.Empty;
 }

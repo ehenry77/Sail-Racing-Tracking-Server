@@ -34,18 +34,18 @@ export function createSchema(db: DatabaseSync): void {
       raceId TEXT NOT NULL REFERENCES races(id) ON DELETE CASCADE,
       sequence INTEGER NOT NULL,
       name TEXT NOT NULL,
-      latitude REAL NOT NULL,
-      longitude REAL NOT NULL,
+      latitude REAL,
+      longitude REAL,
       capturedViaGps INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (raceId, id)
     );
 
     CREATE TABLE IF NOT EXISTS start_lines (
       raceId TEXT PRIMARY KEY REFERENCES races(id) ON DELETE CASCADE,
-      committeeLatitude REAL NOT NULL,
-      committeeLongitude REAL NOT NULL,
-      pinLatitude REAL NOT NULL,
-      pinLongitude REAL NOT NULL
+      committeeLatitude REAL,
+      committeeLongitude REAL,
+      pinLatitude REAL,
+      pinLongitude REAL
     );
 
     CREATE TABLE IF NOT EXISTS race_boat_state (
