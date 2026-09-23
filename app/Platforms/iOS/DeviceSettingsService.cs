@@ -51,6 +51,11 @@ public class DeviceSettingsService : IDeviceSettingsService
         return Task.FromResult(result);
     }
 
+    public Task<List<MediaDeviceInfo>> GetGpsSensorsAsync() =>
+        // iOS exposes exactly one GPS chip to apps, which MAUI's Geolocation API already targets —
+        // there's no OS concept of multiple selectable location sensors like on Windows.
+        Task.FromResult(new List<MediaDeviceInfo>());
+
     public Task<List<MediaDeviceInfo>> GetVideoInputDevicesAsync()
     {
         var result = new List<MediaDeviceInfo>();

@@ -34,6 +34,15 @@
                 </Picker.ItemDisplayBinding>
             </Picker>
 
+            <Label Text="GPS sensor (Windows only)" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding GpsSensors}" SelectedItem="{Binding SelectedGpsSensor}">
+                <Picker.ItemDisplayBinding>
+                    <Binding Path="Name" x:DataType="devices:MediaDeviceInfo" />
+                </Picker.ItemDisplayBinding>
+            </Picker>
+            <Label Text="Lists the laptop's built-in location sensor plus any external GPS receiver installed as a Windows location sensor. Only available on Windows — other platforms only ever expose one GPS chip."
+                   FontSize="12" TextColor="Gray" />
+
             <Label Text="Nothing in the app streams audio/video yet — these are saved as preferences for a future feature to use."
                    FontSize="12" TextColor="Gray" />
 

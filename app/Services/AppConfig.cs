@@ -15,6 +15,8 @@ public static class AppConfig
     private const string AudioInputDeviceNameKey = "AudioInputDeviceName";
     private const string VideoInputDeviceIdKey = "VideoInputDeviceId";
     private const string VideoInputDeviceNameKey = "VideoInputDeviceName";
+    private const string GpsSensorDeviceIdKey = "GpsSensorDeviceId";
+    private const string GpsSensorDeviceNameKey = "GpsSensorDeviceName";
 
     public static string ServerBaseUrl
     {
@@ -49,6 +51,16 @@ public static class AppConfig
         {
             Preferences.Default.Set(VideoInputDeviceIdKey, value.Id);
             Preferences.Default.Set(VideoInputDeviceNameKey, value.Name);
+        }
+    }
+
+    public static (string? Id, string? Name) PreferredGpsSensor
+    {
+        get => (Preferences.Default.Get<string?>(GpsSensorDeviceIdKey, null), Preferences.Default.Get<string?>(GpsSensorDeviceNameKey, null));
+        set
+        {
+            Preferences.Default.Set(GpsSensorDeviceIdKey, value.Id);
+            Preferences.Default.Set(GpsSensorDeviceNameKey, value.Name);
         }
     }
 }

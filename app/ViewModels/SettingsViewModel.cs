@@ -16,6 +16,8 @@ public partial class SettingsViewModel : BaseViewModel
 
     public ObservableCollection<MediaDeviceInfo> VideoInputDevices { get; } = new();
 
+    public ObservableCollection<MediaDeviceInfo> GpsSensors { get; } = new();
+
     [ObservableProperty]
     private string serverBaseUrlText = string.Empty;
 
@@ -27,6 +29,9 @@ public partial class SettingsViewModel : BaseViewModel
 
     [ObservableProperty]
     private MediaDeviceInfo? selectedVideoInputDevice;
+
+    [ObservableProperty]
+    private MediaDeviceInfo? selectedGpsSensor;
 
     [ObservableProperty]
     private string statusMessage = string.Empty;
@@ -56,6 +61,8 @@ public partial class SettingsViewModel : BaseViewModel
                 d => SelectedAudioInputDevice = d);
             await LoadCategoryAsync(VideoInputDevices, _devices.GetVideoInputDevicesAsync, AppConfig.PreferredVideoInputDevice,
                 d => SelectedVideoInputDevice = d);
+            await LoadCategoryAsync(GpsSensors, _devices.GetGpsSensorsAsync, AppConfig.PreferredGpsSensor,
+                d => SelectedGpsSensor = d);
         }
         catch (Exception ex)
         {
@@ -93,6 +100,7 @@ public partial class SettingsViewModel : BaseViewModel
         AppConfig.PreferredAudioOutputDevice = (SelectedAudioOutputDevice?.Id, SelectedAudioOutputDevice?.Name);
         AppConfig.PreferredAudioInputDevice = (SelectedAudioInputDevice?.Id, SelectedAudioInputDevice?.Name);
         AppConfig.PreferredVideoInputDevice = (SelectedVideoInputDevice?.Id, SelectedVideoInputDevice?.Name);
+        AppConfig.PreferredGpsSensor = (SelectedGpsSensor?.Id, SelectedGpsSensor?.Name);
 
         StatusMessage = "Settings saved.";
     }

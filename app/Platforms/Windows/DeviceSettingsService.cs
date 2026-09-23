@@ -14,6 +14,9 @@ public class DeviceSettingsService : IDeviceSettingsService
     public async Task<List<MediaDeviceInfo>> GetVideoInputDevicesAsync() =>
         await EnumerateAsync(DeviceClass.VideoCapture);
 
+    public async Task<List<MediaDeviceInfo>> GetGpsSensorsAsync() =>
+        await EnumerateAsync(DeviceClass.Location);
+
     private static async Task<List<MediaDeviceInfo>> EnumerateAsync(DeviceClass deviceClass)
     {
         try
