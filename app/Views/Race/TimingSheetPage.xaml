@@ -31,16 +31,16 @@
                             </VerticalStackLayout>
                             <Label Grid.Column="1" Text="FINAL LAP" TextColor="OrangeRed" FontAttributes="Bold"
                                    VerticalOptions="Center" IsVisible="{Binding IsOnFinalLap}" />
-                            <Button Grid.Column="2" Text="DNF"
+                            <Button Grid.Column="2" Text="DNF" ToolTipProperties.Text="Did Not Finish"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=SetDnfCommand}"
                                     CommandParameter="{Binding .}" />
-                            <Button Grid.Column="3" Text="DNS"
+                            <Button Grid.Column="3" Text="DNS" ToolTipProperties.Text="Did Not Start"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=SetDnsCommand}"
                                     CommandParameter="{Binding .}" />
-                            <Button Grid.Column="4" Text="RET"
+                            <Button Grid.Column="4" Text="RET" ToolTipProperties.Text="Retired"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=SetRetCommand}"
                                     CommandParameter="{Binding .}" />
-                            <Button Grid.Column="5" Text="OCS"
+                            <Button Grid.Column="5" Text="OCS" ToolTipProperties.Text="On Course Side (premature start)"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=SetOcsCommand}"
                                     CommandParameter="{Binding .}" />
                         </Grid>

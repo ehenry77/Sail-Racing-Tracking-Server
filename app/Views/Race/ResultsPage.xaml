@@ -13,7 +13,8 @@
                     <Grid ColumnDefinitions="Auto,*,Auto" Padding="8">
                         <Label Grid.Column="0" Text="{Binding Rank}" FontAttributes="Bold" WidthRequest="32" />
                         <Label Grid.Column="1" Text="{Binding ParticipantName}" />
-                        <Label Grid.Column="2" Text="{Binding Status}" />
+                        <Label Grid.Column="2" Text="{Binding Status}"
+                               ToolTipProperties.Text="Finished, DNF (Did Not Finish), DNS (Did Not Start), RET (Retired), or OCS (On Course Side / premature start)" />
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>

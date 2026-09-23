@@ -34,7 +34,8 @@
                                 HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0"
                                 IsVisible="{Binding ClassFlagUp}" />
                     </Grid>
-                    <Label Text="Class flag" FontSize="12" TextColor="Gray" HorizontalOptions="Center" />
+                    <Label Text="Class flag" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
+                           ToolTipProperties.Text="Warning signal — hoisted at 5 minutes before the start" />
                 </VerticalStackLayout>
 
                 <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
@@ -51,7 +52,8 @@
                                      HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                     </Grid>
-                    <Label Text="Preparatory (P)" FontSize="12" TextColor="Gray" HorizontalOptions="Center" />
+                    <Label Text="Preparatory (P)" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
+                           ToolTipProperties.Text="Preparatory signal flag 'P' (Blue Peter) — hoisted at 4 minutes, lowered at 1 minute before the start" />
                 </VerticalStackLayout>
 
             </HorizontalStackLayout>

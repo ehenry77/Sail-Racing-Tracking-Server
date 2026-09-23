@@ -13,7 +13,8 @@
             <VerticalStackLayout Spacing="8">
                 <Entry Placeholder="Name" Text="{Binding EditName}" />
                 <Entry Placeholder="Helm" Text="{Binding EditHelm}" />
-                <Entry Placeholder="TCF" Text="{Binding EditTcf}" Keyboard="Numeric" />
+                <Entry Placeholder="TCF" Text="{Binding EditTcf}" Keyboard="Numeric"
+                       ToolTipProperties.Text="Time Correction Factor — handicap rating used to compute corrected time (corrected time = elapsed time × TCF)" />
                 <HorizontalStackLayout Spacing="8">
                     <Button Text="Save" Command="{Binding SaveCommand}" />
                     <Button Text="Cancel" Command="{Binding CancelEditCommand}" />
@@ -29,7 +30,8 @@
                             <VerticalStackLayout Grid.Column="0">
                                 <Label Text="{Binding Name}" FontAttributes="Bold" />
                                 <Label Text="{Binding Helm, StringFormat='Helm: {0}'}" FontSize="12" />
-                                <Label Text="{Binding Tcf, StringFormat='TCF: {0}'}" FontSize="12" />
+                                <Label Text="{Binding Tcf, StringFormat='TCF: {0}'}" FontSize="12"
+                                       ToolTipProperties.Text="Time Correction Factor — handicap rating used to compute corrected time" />
                             </VerticalStackLayout>
                             <Button Grid.Column="1" Text="Edit"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CompetitorsViewModel}}, Path=EditCommand}"
