@@ -6,8 +6,11 @@
              x:DataType="vm:TimingSheetViewModel"
              Title="{Binding Title}">
 
-    <Grid RowDefinitions="*,Auto" Padding="12" RowSpacing="8">
-        <CollectionView Grid.Row="0" ItemsSource="{Binding Entries}">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="12" RowSpacing="8">
+        <Label Grid.Row="0" Text="{Binding ConnectionStatusText}" TextColor="OrangeRed" FontSize="12"
+               IsVisible="{Binding HasConnectionIssue}" />
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Entries}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:RaceTimingEntry">
                     <Border Padding="8" Margin="0,0,0,6" Stroke="LightGray" StrokeShape="RoundRectangle 6">
@@ -46,7 +49,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <HorizontalStackLayout Grid.Row="1" Spacing="8">
+        <HorizontalStackLayout Grid.Row="2" Spacing="8">
             <Button Text="Shorten Course" Command="{Binding ShortenCourseCommand}" />
             <Button Text="View Results" Command="{Binding ViewResultsCommand}" />
         </HorizontalStackLayout>

@@ -14,6 +14,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     private readonly ISailRacingApiClient _api;
 
     private Race? _race;
+    private IDispatcherTimer? _preStartTimer;
 
     public string? RaceId { get; set; }
 
@@ -34,6 +35,16 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
 
     [ObservableProperty]
     private string startAtText = string.Empty;
+
+    /// <summary>Live clock + scheduled-start countdown shown before "Begin Start Sequence" is pressed.</summary>
+    [ObservableProperty]
+    private string currentTimeText = string.Empty;
+
+    [ObservableProperty]
+    private string scheduledCountdownText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasScheduledStartTime;
 
     public StartSequenceViewModel(IRaceRepository races, IStartSequenceService sequence, ISailRacingApiClient api)
     {
@@ -60,6 +71,49 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             StartAtText = FormatStartAt(_race.StartAt.Value);
             _sequence.Start(_race.StartAt.Value);
         }
+        else
+        {
+            HasScheduledStartTime = _race?.ScheduledStartTime is not null;
+            StartPreStartTimer();
+        }
+    }
+
+    private void StartPreStartTimer()
+    {
+        StopPreStartTimer();
+
+        _preStartTimer = Application.Current!.Dispatcher.CreateTimer();
+        _preStartTimer.Interval = TimeSpan.FromSeconds(1);
+        _preStartTimer.Tick += (_, _) => UpdatePreStartDisplay();
+        _preStartTimer.Start();
+
+        UpdatePreStartDisplay();
+    }
+
+    private void UpdatePreStartDisplay()
+    {
+        var now = DateTimeOffset.Now;
+        CurrentTimeText = now.ToString("HH:mm:ss");
+
+        if (_race?.ScheduledStartTime is { } scheduled)
+        {
+            var remaining = scheduled - DateTimeOffset.UtcNow;
+            ScheduledCountdownText = remaining > TimeSpan.Zero
+                ? $"Scheduled start in {FormatDuration(remaining)}"
+                : "Scheduled start time has passed";
+        }
+    }
+
+    private static string FormatDuration(TimeSpan t) =>
+        t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t:mm\\:ss}" : $"{t:mm\\:ss}";
+
+    private void StopPreStartTimer()
+    {
+        if (_preStartTimer is not null)
+        {
+            _preStartTimer.Stop();
+            _preStartTimer = null;
+        }
     }
 
     [RelayCommand]
@@ -85,6 +139,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             await _races.SaveAggregateAsync(aggregate);
         }
 
+        StopPreStartTimer();
         IsSequenceStarted = true;
         StartAtText = FormatStartAt(_race.StartAt.Value);
         _sequence.Start(_race.StartAt.Value);
@@ -149,5 +204,6 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     {
         _sequence.StatusChanged -= OnStatusChanged;
         _sequence.Stop();
+        StopPreStartTimer();
     }
 }

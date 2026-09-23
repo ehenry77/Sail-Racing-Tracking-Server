@@ -15,6 +15,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
     private int _cursor;
     private bool _classFlagUp;
     private bool _pFlagUp;
+    private CancellationTokenSource? _tickCts;
 
     public bool IsRunning { get; private set; }
 
@@ -23,6 +24,8 @@ public class StartSequenceService : IStartSequenceService, IDisposable
     public void Start(DateTimeOffset startAt)
     {
         Stop();
+        _tickCts?.Cancel();
+        _tickCts = null;
 
         _startAt = startAt;
         _cursor = 0;
@@ -30,8 +33,10 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         _pFlagUp = false;
 
         // Silently fast-forward past anything already in the past (e.g. the app was restarted
-        // mid-sequence) so flag state is correct without re-speaking stale countdown numbers.
-        var elapsedNow = DateTimeOffset.UtcNow - _startAt;
+        // mid-sequence) so flag state is correct without re-speaking stale countdown numbers. The
+        // small buffer avoids a race where an event due "right now" gets swallowed here instead of
+        // firing (with its announcement spoken) on the very next real tick.
+        var elapsedNow = DateTimeOffset.UtcNow - _startAt - TimeSpan.FromMilliseconds(500);
         while (_cursor < _timeline.Count && _timeline[_cursor].Offset < elapsedNow)
         {
             ApplyFlagState(_timeline[_cursor]);
@@ -99,13 +104,49 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Countdown digits ("10"..."1") are low priority: if speech is falling behind the 1-second
+    /// cadence, a newer digit cancels whatever digit is still speaking/queued rather than piling up
+    /// an ever-growing backlog. Flag/alarm announcements are high priority: they always cut off a
+    /// lagging digit and speak immediately, so they're never silently delayed behind a queue — which
+    /// is what made the -5:00/-4:00/-1:00/0:00 calls hard to hear before this fix.
+    /// </summary>
     private async Task SpeakAsync(SequenceEvent evt)
     {
         var text = StartSequenceTimeline.SpokenText(evt);
-        await _speechLock.WaitAsync();
+
+        if (evt.Type == SequenceEventType.CountdownTick)
+        {
+            _tickCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _tickCts = cts;
+            await SpeakNowAsync(text, cts.Token);
+        }
+        else
+        {
+            _tickCts?.Cancel();
+            await SpeakNowAsync(text, CancellationToken.None);
+        }
+    }
+
+    private async Task SpeakNowAsync(string text, CancellationToken token)
+    {
         try
         {
-            await TextToSpeech.Default.SpeakAsync(text);
+            await _speechLock.WaitAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // superseded before we even got to speak it — nothing was acquired, nothing to release
+        }
+
+        try
+        {
+            await TextToSpeech.Default.SpeakAsync(text, cancelToken: token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected: superseded by a newer countdown digit or a higher-priority flag/alarm call.
         }
         catch
         {
@@ -131,5 +172,10 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         });
     }
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        Stop();
+        _tickCts?.Cancel();
+        _tickCts = null;
+    }
 }

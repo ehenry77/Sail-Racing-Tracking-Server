@@ -14,7 +14,12 @@ public interface IRaceSocketClient
 {
     event EventHandler<RaceSocketMessage>? MessageReceived;
 
-    Task ConnectAsync(string raceId, string role, string? participantId, CancellationToken ct = default);
+    /// <summary>
+    /// Connects and joins the race. Never throws — a network/connection failure (unreachable server,
+    /// DNS failure, bad URL, etc.) is caught and reported via the returned bool, so a caller on the UI
+    /// thread (e.g. an async-void Page.OnAppearing) can't crash the app from an unhandled exception.
+    /// </summary>
+    Task<bool> ConnectAsync(string raceId, string role, string? participantId, CancellationToken ct = default);
 
     Task DisconnectAsync();
 }

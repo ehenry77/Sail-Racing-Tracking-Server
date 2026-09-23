@@ -11,22 +11,35 @@ public class RaceSocketClient : IRaceSocketClient
 
     public event EventHandler<RaceSocketMessage>? MessageReceived;
 
-    public async Task ConnectAsync(string raceId, string role, string? participantId, CancellationToken ct = default)
+    public async Task<bool> ConnectAsync(string raceId, string role, string? participantId, CancellationToken ct = default)
     {
         await DisconnectAsync();
 
-        var httpBase = new Uri(AppConfig.ServerBaseUrl);
-        var scheme = httpBase.Scheme == "https" ? "wss" : "ws";
-        var wsUri = new UriBuilder(httpBase) { Scheme = scheme, Path = "/ws" }.Uri;
+        try
+        {
+            var httpBase = new Uri(AppConfig.ServerBaseUrl);
+            var scheme = httpBase.Scheme == "https" ? "wss" : "ws";
+            var wsUri = new UriBuilder(httpBase) { Scheme = scheme, Path = "/ws" }.Uri;
 
-        _socket = new ClientWebSocket();
-        await _socket.ConnectAsync(wsUri, ct);
+            _socket = new ClientWebSocket();
+            await _socket.ConnectAsync(wsUri, ct);
 
-        var join = JsonSerializer.Serialize(new { type = "join", raceId, role, participantId });
-        await SendRawAsync(join, ct);
+            var join = JsonSerializer.Serialize(new { type = "join", raceId, role, participantId });
+            await SendRawAsync(join, ct);
 
-        _receiveCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        _ = ReceiveLoopAsync(_receiveCts.Token);
+            _receiveCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _ = ReceiveLoopAsync(_receiveCts.Token);
+            return true;
+        }
+        catch
+        {
+            // Server unreachable, bad URL, DNS failure, etc. The timing sheet still works off the
+            // locally-synced race data — it just won't get live lap-counting updates until a
+            // subsequent ConnectAsync call (e.g. re-entering the page) succeeds.
+            _socket?.Dispose();
+            _socket = null;
+            return false;
+        }
     }
 
     public async Task DisconnectAsync()

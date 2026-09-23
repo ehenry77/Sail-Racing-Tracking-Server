@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SailRacing.Data;
 using SailRacing.Models;
@@ -21,6 +22,12 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     public string? RaceId { get; set; }
 
     public ObservableCollection<RaceTimingEntry> Entries { get; } = new();
+
+    [ObservableProperty]
+    private string connectionStatusText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasConnectionIssue;
 
     public TimingSheetViewModel(
         IRaceRepository races,
@@ -45,36 +52,50 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        var aggregate = await _races.GetAggregateAsync(RaceId);
-        if (aggregate is null)
+        try
         {
-            return;
-        }
-
-        _race = aggregate.Race;
-
-        var participantIds = aggregate.RaceParticipants.Select(rp => rp.ParticipantId);
-        var participants = await _participants.GetByIdsAsync(participantIds);
-
-        Entries.Clear();
-        foreach (var rp in aggregate.RaceParticipants)
-        {
-            var participant = participants.FirstOrDefault(p => p.Id == rp.ParticipantId);
-            Entries.Add(new RaceTimingEntry
+            var aggregate = await _races.GetAggregateAsync(RaceId);
+            if (aggregate is null)
             {
-                ParticipantId = rp.ParticipantId,
-                ParticipantName = participant?.Name ?? "(unknown)",
-                Tcf = participant?.Tcf ?? 1.0,
-                Laps = rp.Laps,
-                LapsCompleted = rp.LapsCompleted,
-                IsOnFinalLap = rp.IsOnFinalLap,
-                Status = rp.Status,
-                FinishTime = rp.FinishTime,
-                ElapsedSeconds = rp.ElapsedSeconds
-            });
-        }
+                return;
+            }
 
-        await _socket.ConnectAsync(_race.Id, "committee", participantId: null);
+            _race = aggregate.Race;
+
+            var participantIds = aggregate.RaceParticipants.Select(rp => rp.ParticipantId);
+            var participants = await _participants.GetByIdsAsync(participantIds);
+
+            Entries.Clear();
+            foreach (var rp in aggregate.RaceParticipants)
+            {
+                var participant = participants.FirstOrDefault(p => p.Id == rp.ParticipantId);
+                Entries.Add(new RaceTimingEntry
+                {
+                    ParticipantId = rp.ParticipantId,
+                    ParticipantName = participant?.Name ?? "(unknown)",
+                    Tcf = participant?.Tcf ?? 1.0,
+                    Laps = rp.Laps,
+                    LapsCompleted = rp.LapsCompleted,
+                    IsOnFinalLap = rp.IsOnFinalLap,
+                    Status = rp.Status,
+                    FinishTime = rp.FinishTime,
+                    ElapsedSeconds = rp.ElapsedSeconds
+                });
+            }
+
+            var connected = await _socket.ConnectAsync(_race.Id, "committee", participantId: null);
+            HasConnectionIssue = !connected;
+            ConnectionStatusText = connected
+                ? string.Empty
+                : "Not connected to server — lap counts will update once connectivity is restored (reopen this page to retry).";
+        }
+        catch (Exception ex)
+        {
+            // This method is invoked from an async-void Page.OnAppearing — an unhandled exception
+            // here would crash the whole app, so nothing that can throw is allowed to escape it.
+            HasConnectionIssue = true;
+            ConnectionStatusText = $"Could not load the timing sheet: {ex.Message}";
+        }
     }
 
     private void OnMessageReceived(object? sender, RaceSocketMessage message)
