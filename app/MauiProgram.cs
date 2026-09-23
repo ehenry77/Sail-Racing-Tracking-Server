@@ -35,7 +35,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<IResultPublicationRepository, ResultPublicationRepository>();
 
         // Services
-        builder.Services.AddSingleton<HttpClient>();
+        // Every screen (Race Setup, Start Sequence, Timing Sheet, Results) must stay fully usable off
+        // local data when the server is unreachable — a short timeout means a down/unresponsive server
+        // fails fast instead of leaving the UI hanging for HttpClient's 100-second default.
+        builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(8) });
         builder.Services.AddSingleton<ISailRacingApiClient, SailRacingApiClient>();
         builder.Services.AddSingleton<IRaceSyncService, RaceSyncService>();
         builder.Services.AddTransient<IStartSequenceService, StartSequenceService>();

@@ -22,7 +22,13 @@ public class RaceSocketClient : IRaceSocketClient
             var wsUri = new UriBuilder(httpBase) { Scheme = scheme, Path = "/ws" }.Uri;
 
             _socket = new ClientWebSocket();
-            await _socket.ConnectAsync(wsUri, ct);
+
+            // ClientWebSocket.ConnectAsync has no built-in timeout — an unreachable server that hangs
+            // rather than refuses the connection outright could otherwise block far longer than is
+            // acceptable for a page that must stay usable off local data alone.
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            await _socket.ConnectAsync(wsUri, linkedCts.Token);
 
             var join = JsonSerializer.Serialize(new { type = "join", raceId, role, participantId });
             await SendRawAsync(join, ct);

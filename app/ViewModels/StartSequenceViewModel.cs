@@ -144,15 +144,10 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         StartAtText = FormatStartAt(_race.StartAt.Value);
         _sequence.Start(_race.StartAt.Value);
 
-        try
-        {
-            await _api.StartSequenceAsync(_race.Id, _race.StartAt.Value);
-        }
-        catch
-        {
-            // Non-fatal: the sequence itself runs entirely off the locally-persisted StartAt;
-            // the server will catch up next time the race syncs.
-        }
+        // Fire-and-forget: the sequence itself runs entirely off the locally-persisted StartAt and
+        // must never wait on the network — a down server just means it catches up next time the
+        // race syncs (RaceSyncService's connectivity watcher retries automatically).
+        _ = SafeCallAsync(() => _api.StartSequenceAsync(_race.Id, _race.StartAt.Value));
     }
 
     [RelayCommand]
@@ -171,16 +166,23 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             await _races.SaveAggregateAsync(aggregate);
         }
 
+        // Fire-and-forget: the committee must be able to move into Race Mode immediately regardless
+        // of server reachability — waiting here would block navigation for up to the HTTP timeout.
+        _ = SafeCallAsync(() => _api.AllClearAsync(_race.Id));
+
+        await Shell.Current.GoToAsync($"timingSheet?raceId={_race.Id}");
+    }
+
+    private static async Task SafeCallAsync(Func<Task> call)
+    {
         try
         {
-            await _api.AllClearAsync(_race.Id);
+            await call();
         }
         catch
         {
             // Non-fatal: retried implicitly next time the race is pushed/synced.
         }
-
-        await Shell.Current.GoToAsync($"timingSheet?raceId={_race.Id}");
     }
 
     private void OnStatusChanged(object? sender, StartSequenceStatus status)

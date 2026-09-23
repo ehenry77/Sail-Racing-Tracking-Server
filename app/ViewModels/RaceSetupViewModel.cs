@@ -299,15 +299,28 @@ public partial class RaceSetupViewModel : BaseViewModel
             await _races.SaveAggregateAsync(aggregate);
 
             RaceId = _race.Id;
-
-            StatusMessage = "Saved locally. Syncing to server...";
-            var synced = await _sync.PushAsync(_race.Id);
-            StatusMessage = synced ? "Saved and synced." : "Saved locally; will retry sync automatically.";
+            StatusMessage = "Saved locally. Syncing to server…";
         }
         finally
         {
             IsBusy = false;
         }
+
+        // Fire-and-forget: the local save above is already complete and durable, so Save must never
+        // make the committee wait on the network — a down/unreachable server just means this resolves
+        // later (RaceSyncService's connectivity watcher retries it automatically in the background).
+        var raceId = _race.Id;
+        _ = _sync.PushAsync(raceId).ContinueWith(task =>
+        {
+            var synced = task.Status == TaskStatus.RanToCompletion && task.Result;
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (RaceId == raceId)
+                {
+                    StatusMessage = synced ? "Saved and synced." : "Saved locally; will retry sync automatically.";
+                }
+            });
+        });
     }
 
     [RelayCommand]

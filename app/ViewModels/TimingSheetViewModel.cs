@@ -225,9 +225,18 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         _race.ShortenCourseAppliedAt = DateTimeOffset.UtcNow;
         await PersistAsync();
 
+        // Fire-and-forget: the committee's local timing sheet is already updated (via PersistAsync
+        // above); this must not block on the network. A down server just means competitors' web pages
+        // see the shortened course next time it syncs, not that the committee action itself stalls.
+        var raceId = _race.Id;
+        _ = SafeCallAsync(() => _api.ShortenCourseAsync(raceId, newLaps));
+    }
+
+    private static async Task SafeCallAsync(Func<Task> call)
+    {
         try
         {
-            await _api.ShortenCourseAsync(_race.Id, newLaps);
+            await call();
         }
         catch
         {
