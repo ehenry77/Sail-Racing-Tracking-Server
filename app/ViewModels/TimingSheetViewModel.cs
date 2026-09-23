@@ -29,6 +29,25 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     [ObservableProperty]
     private bool hasConnectionIssue;
 
+    /// <summary>The boat currently selected for manual lap/finish-time entry — the offline-capable
+    /// fallback to the server's GPS-based auto lap-counting, e.g. when a competitor isn't tracking
+    /// or the server is unreachable.</summary>
+    [ObservableProperty]
+    private RaceTimingEntry? selectedEntry;
+
+    [ObservableProperty]
+    private DateTime editFinishDate = DateTime.Today;
+
+    [ObservableProperty]
+    private TimeSpan editFinishTimeOfDay = DateTime.Now.TimeOfDay;
+
+    partial void OnSelectedEntryChanged(RaceTimingEntry? value)
+    {
+        var local = (value?.FinishTime ?? DateTimeOffset.Now).ToLocalTime();
+        EditFinishDate = local.Date;
+        EditFinishTimeOfDay = local.TimeOfDay;
+    }
+
     public TimingSheetViewModel(
         IRaceRepository races,
         IFleetRepository fleets,
@@ -205,6 +224,47 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     {
         entry.Status = status;
         await PersistAsync();
+    }
+
+    /// <summary>Manual offline fallback for lap counting: stamps "now" as this boat's next lap.</summary>
+    [RelayCommand]
+    private async Task RecordLapNowAsync(RaceTimingEntry entry)
+    {
+        entry.LapsCompleted += 1;
+
+        if (entry.LapsCompleted >= entry.Laps)
+        {
+            ApplyManualFinish(entry, DateTimeOffset.UtcNow);
+        }
+        else
+        {
+            entry.IsOnFinalLap = entry.LapsCompleted == entry.Laps - 1;
+        }
+
+        await PersistAsync();
+    }
+
+    /// <summary>Manual offline fallback for finish detection: sets this boat's finish time from the
+    /// date/time pickers, for backfilling from a stopwatch or correcting a missed GPS detection.</summary>
+    [RelayCommand]
+    private async Task SetFinishTimeAsync(RaceTimingEntry entry)
+    {
+        var local = EditFinishDate.Date + EditFinishTimeOfDay;
+        var finishAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
+        ApplyManualFinish(entry, finishAt.ToUniversalTime());
+        await PersistAsync();
+    }
+
+    [RelayCommand]
+    private void ClearSelection() => SelectedEntry = null;
+
+    private void ApplyManualFinish(RaceTimingEntry entry, DateTimeOffset finishAtUtc)
+    {
+        entry.Status = RaceParticipantStatus.Finished;
+        entry.IsOnFinalLap = false;
+        entry.LapsCompleted = Math.Max(entry.LapsCompleted, entry.Laps);
+        entry.FinishTime = finishAtUtc;
+        entry.ElapsedSeconds = _race?.StartAt is { } startAt ? (finishAtUtc - startAt).TotalSeconds : null;
     }
 
     [RelayCommand]
