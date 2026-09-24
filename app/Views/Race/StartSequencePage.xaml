@@ -7,7 +7,7 @@
              Title="{Binding Title}">
 
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="20" VerticalOptions="Center">
+        <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
 
             <!-- Pre-sequence feedback: shown before "Begin Start Sequence" is pressed -->
             <VerticalStackLayout Spacing="6" HorizontalOptions="Center"
@@ -20,47 +20,45 @@
                        IsVisible="{Binding HasScheduledStartTime, Converter={StaticResource InvertedBoolConverter}}" />
             </VerticalStackLayout>
 
-            <!-- Graphical flags -->
-            <HorizontalStackLayout Spacing="36" HorizontalOptions="Center">
+            <!-- Flag stage: flags rest below the counter (row 2) and animate up above it (row 0)
+                 when hoisted — see StartSequencePage.xaml.cs. Row heights must match FlagTravelDistance. -->
+            <Grid RowDefinitions="100,100,100" HorizontalOptions="Center" WidthRequest="320">
 
-                <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
-                    <Grid ColumnDefinitions="6,60" HeightRequest="90" WidthRequest="66">
-                        <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
-                        <Border Grid.Column="1" BackgroundColor="Transparent" Stroke="#cccccc" StrokeThickness="1"
-                                StrokeDashArray="3,2" HeightRequest="34" WidthRequest="52"
-                                HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0" />
-                        <Border Grid.Column="1" BackgroundColor="White" Stroke="#666666" StrokeThickness="1.5"
-                                HeightRequest="34" WidthRequest="52"
-                                HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0"
-                                IsVisible="{Binding ClassFlagUp}" />
-                    </Grid>
-                    <Label Text="Class flag" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
-                           ToolTipProperties.Text="Warning signal — hoisted at 5 minutes before the start" />
-                </VerticalStackLayout>
+                <Label Grid.Row="1" Text="{Binding CountdownText}" FontSize="64" HorizontalOptions="Center"
+                       VerticalOptions="Center" IsVisible="{Binding IsSequenceStarted}" />
 
-                <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
-                    <Grid ColumnDefinitions="6,60" HeightRequest="90" WidthRequest="66">
-                        <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
-                        <Border Grid.Column="1" BackgroundColor="Transparent" Stroke="#cccccc" StrokeThickness="1"
-                                StrokeDashArray="3,2" HeightRequest="34" WidthRequest="52"
-                                HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0" />
-                        <Border Grid.Column="1" BackgroundColor="#1565C0" Stroke="#0d47a1" StrokeThickness="1.5"
-                                HeightRequest="34" WidthRequest="52"
-                                HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0"
-                                IsVisible="{Binding PFlagUp}">
-                            <BoxView Color="White" WidthRequest="18" HeightRequest="16"
-                                     HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Border>
-                    </Grid>
-                    <Label Text="Preparatory (P)" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
-                           ToolTipProperties.Text="Preparatory signal flag 'P' (Blue Peter) — hoisted at 4 minutes, lowered at 1 minute before the start" />
-                </VerticalStackLayout>
+                <HorizontalStackLayout Grid.Row="2" Spacing="36" HorizontalOptions="Center" VerticalOptions="Start">
 
-            </HorizontalStackLayout>
+                    <VerticalStackLayout x:Name="ClassFlagCard" HorizontalOptions="Center" Spacing="4">
+                        <Grid ColumnDefinitions="6,90" HeightRequest="60" WidthRequest="96">
+                            <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
+                            <HorizontalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0">
+                                <BoxView Color="White" WidthRequest="20" HeightRequest="34" />
+                                <BoxView Color="#1565C0" WidthRequest="20" HeightRequest="34" />
+                                <BoxView Color="#C62828" WidthRequest="20" HeightRequest="34" />
+                                <BoxView Color="#F9A825" WidthRequest="20" HeightRequest="34" />
+                            </HorizontalStackLayout>
+                        </Grid>
+                        <Label Text="Class flag" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
+                               ToolTipProperties.Text="Warning signal — hoisted at 5 minutes before the start" />
+                    </VerticalStackLayout>
 
-            <!-- Countdown, once running -->
-            <Label Text="{Binding CountdownText}" FontSize="64" HorizontalOptions="Center"
-                   IsVisible="{Binding IsSequenceStarted}" />
+                    <VerticalStackLayout x:Name="PFlagCard" HorizontalOptions="Center" Spacing="4">
+                        <Grid ColumnDefinitions="6,60" HeightRequest="60" WidthRequest="66">
+                            <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
+                            <Border Grid.Column="1" BackgroundColor="#1565C0" Stroke="#0d47a1" StrokeThickness="1.5"
+                                    HeightRequest="34" WidthRequest="52" HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0">
+                                <BoxView Color="White" WidthRequest="18" HeightRequest="16"
+                                         HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                        </Grid>
+                        <Label Text="Preparatory (P)" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
+                               ToolTipProperties.Text="Preparatory signal flag 'P' (Blue Peter) — hoisted at 4 minutes, lowered at 1 minute before the start" />
+                    </VerticalStackLayout>
+
+                </HorizontalStackLayout>
+            </Grid>
+
             <Label Text="{Binding StartAtText}" FontSize="18" HorizontalOptions="Center" TextColor="Gray"
                    IsVisible="{Binding IsSequenceStarted}" />
 
