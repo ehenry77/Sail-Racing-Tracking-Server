@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SailRacing.Views.SplashPage"
+             BackgroundColor="White">
+
+    <!--
+    Custom in-app splash: this Windows build runs unpackaged (WindowsPackageType=None), so the OS-level
+    MSIX splash screen mechanism (backed by MauiSplashScreen) never actually gets shown on Windows —
+    it only applies to packaged apps and to the mobile platforms. This page stands in for it on Windows,
+    and is harmless/consistent to show briefly on the other platforms too.
+    -->
+    <Grid VerticalOptions="Center" HorizontalOptions="Center">
+        <VerticalStackLayout Spacing="16" HorizontalOptions="Center" VerticalOptions="Center">
+            <Image Source="splash.png" WidthRequest="220" HeightRequest="220" Aspect="AspectFit" />
+            <Label Text="Sail-Racing" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#0d47a1" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>
