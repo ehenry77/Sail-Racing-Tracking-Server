@@ -9,6 +9,12 @@
     <ScrollView>
         <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
 
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
+                <Button Text="‹ Races" Command="{Binding BackToRacesCommand}"
+                        ToolTipProperties.Text="Back to the race list (the sequence keeps running)" />
+                <Button Text="Edit race" Command="{Binding EditRaceCommand}" />
+            </HorizontalStackLayout>
+
             <!-- Pre-sequence feedback: shown before "Begin Start Sequence" is pressed -->
             <VerticalStackLayout Spacing="6" HorizontalOptions="Center"
                                   IsVisible="{Binding IsSequenceStarted, Converter={StaticResource InvertedBoolConverter}}">

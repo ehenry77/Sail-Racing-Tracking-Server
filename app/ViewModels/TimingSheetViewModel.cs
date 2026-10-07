@@ -61,11 +61,16 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         _socket = socket;
         _api = api;
         Title = "Timing Sheet";
-        _socket.MessageReceived += OnMessageReceived;
     }
 
     public async Task OnAppearingAsync()
     {
+        // Listen only while the page is showing: with back-navigation the user can leave and re-enter,
+        // and a lingering instance still receiving socket messages would PersistAsync its stale entries
+        // over newer data (e.g. a finish time set manually in the new instance).
+        _socket.MessageReceived -= OnMessageReceived;
+        _socket.MessageReceived += OnMessageReceived;
+
         if (string.IsNullOrEmpty(RaceId))
         {
             return;
@@ -349,9 +354,20 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         await _races.SaveAggregateAsync(aggregate);
     }
 
-    public void Dispose()
+    [RelayCommand]
+    private async Task EditRaceAsync()
+    {
+        if (!string.IsNullOrEmpty(RaceId))
+        {
+            await Shell.Current.GoToAsync($"raceSetup?raceId={RaceId}");
+        }
+    }
+
+    public void OnDisappearing()
     {
         _socket.MessageReceived -= OnMessageReceived;
         _ = _socket.DisconnectAsync();
     }
+
+    public void Dispose() => OnDisappearing();
 }

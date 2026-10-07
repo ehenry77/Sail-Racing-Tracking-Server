@@ -52,11 +52,16 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         _sequence = sequence;
         _api = api;
         Title = "Start Sequence";
-        _sequence.StatusChanged += OnStatusChanged;
     }
 
     public async Task OnAppearingAsync()
     {
+        // Subscribe per appearance (not in the constructor) and drop it in OnDisappearing: the user can
+        // now leave this page mid-sequence and come back, and the sequence service is a singleton that
+        // keeps running — a stale view model must not stay subscribed to it.
+        _sequence.StatusChanged -= OnStatusChanged;
+        _sequence.StatusChanged += OnStatusChanged;
+
         if (string.IsNullOrEmpty(RaceId))
         {
             return;
@@ -202,10 +207,22 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
 
     private static string FormatStartAt(DateTimeOffset startAt) => $"Start signal at {startAt.ToLocalTime():HH:mm:ss}";
 
-    public void Dispose()
+    [RelayCommand]
+    private async Task EditRaceAsync()
+    {
+        if (!string.IsNullOrEmpty(RaceId))
+        {
+            await Shell.Current.GoToAsync($"raceSetup?raceId={RaceId}");
+        }
+    }
+
+    /// <summary>Leaving the page must not stop the sequence itself — it keeps counting down and
+    /// announcing in the background; only this view model's UI hooks are released.</summary>
+    public void OnDisappearing()
     {
         _sequence.StatusChanged -= OnStatusChanged;
-        _sequence.Stop();
         StopPreStartTimer();
     }
+
+    public void Dispose() => OnDisappearing();
 }

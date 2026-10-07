@@ -17,6 +17,13 @@ public partial class RaceSetupViewModel : BaseViewModel
 
     private Race _race = new();
 
+    // The race's existing per-boat entries (lap progress, status, finish times). Saving an edit must
+    // update these in place — rebuilding them from the edit form would reset a running race's progress.
+    private List<Models.RaceParticipant> _loadedRaceParticipants = new();
+
+    // Setting SelectedFleet while loading an existing race must not trigger the user-driven reload.
+    private bool _loadingRace;
+
     // Shell sets this via [QueryProperty] before OnAppearing runs, but only when navigating with a
     // "raceId" query param — for a brand-new race there is none, so loading happens explicitly from
     // OnAppearingAsync (called by the page) rather than as a side effect of this setter. That also
@@ -65,6 +72,11 @@ public partial class RaceSetupViewModel : BaseViewModel
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
+    /// <summary>False once the race has moved past setup — the "Save &amp; Start Sequence" shortcut no
+    /// longer applies, but the race can still be edited and saved.</summary>
+    [ObservableProperty]
+    private bool isSetupStage = true;
+
     public RaceSetupViewModel(
         IRaceRepository races,
         IFleetRepository fleets,
@@ -93,6 +105,8 @@ public partial class RaceSetupViewModel : BaseViewModel
             if (aggregate is not null)
             {
                 _race = aggregate.Race;
+                _loadedRaceParticipants = aggregate.RaceParticipants;
+                IsSetupStage = _race.Status == RaceStatus.Setup;
                 RaceName = _race.Name;
                 LapsDefaultText = _race.LapsDefault.ToString();
                 FinishSameAsStart = _race.FinishSameAsStart;
@@ -127,17 +141,27 @@ public partial class RaceSetupViewModel : BaseViewModel
                     });
                 }
 
-                SelectedFleet = Fleets.FirstOrDefault(f => f.Id == _race.FleetId);
-                await LoadRaceParticipantsAsync(aggregate.RaceParticipants);
+                _loadingRace = true;
+                try
+                {
+                    SelectedFleet = Fleets.FirstOrDefault(f => f.Id == _race.FleetId);
+                    await LoadRaceParticipantsAsync();
+                }
+                finally
+                {
+                    _loadingRace = false;
+                }
             }
         }
         else
         {
             _race = new Race();
+            _loadedRaceParticipants = new();
+            IsSetupStage = true;
         }
     }
 
-    private async Task LoadRaceParticipantsAsync(List<Models.RaceParticipant>? existing = null)
+    private async Task LoadRaceParticipantsAsync()
     {
         RaceParticipants.Clear();
         if (SelectedFleet is null)
@@ -148,9 +172,11 @@ public partial class RaceSetupViewModel : BaseViewModel
         var participantIds = await _fleets.GetParticipantIdsAsync(SelectedFleet.Id);
         var participants = await _participants.GetByIdsAsync(participantIds);
 
+        // Clear again after the awaits: two overlapping loads would otherwise both add their rows.
+        RaceParticipants.Clear();
         foreach (var participant in participants)
         {
-            var existingEntry = existing?.FirstOrDefault(e => e.ParticipantId == participant.Id);
+            var existingEntry = _loadedRaceParticipants.FirstOrDefault(e => e.ParticipantId == participant.Id);
             RaceParticipants.Add(new RaceParticipantEditItem
             {
                 ParticipantId = participant.Id,
@@ -162,7 +188,10 @@ public partial class RaceSetupViewModel : BaseViewModel
 
     partial void OnSelectedFleetChanged(Fleet? value)
     {
-        _ = LoadRaceParticipantsAsync();
+        if (!_loadingRace)
+        {
+            _ = LoadRaceParticipantsAsync();
+        }
     }
 
     [RelayCommand]
@@ -286,17 +315,22 @@ public partial class RaceSetupViewModel : BaseViewModel
                     Longitude = ParseOrNull(b.LongitudeText),
                     CapturedViaGps = b.CapturedViaGps
                 }).ToList(),
-                RaceParticipants = RaceParticipants.Select(rp => new Models.RaceParticipant
+                // Reuse each boat's existing entry and only change its lap target, so editing a race
+                // that's already running keeps its lap counts, statuses and finish times.
+                RaceParticipants = RaceParticipants.Select(rp =>
                 {
-                    RaceId = _race.Id,
-                    ParticipantId = rp.ParticipantId,
-                    Laps = int.TryParse(rp.LapsText, out var l) ? l : _race.LapsDefault
+                    var entry = _loadedRaceParticipants.FirstOrDefault(e => e.ParticipantId == rp.ParticipantId)
+                                ?? new Models.RaceParticipant { ParticipantId = rp.ParticipantId };
+                    entry.RaceId = _race.Id;
+                    entry.Laps = int.TryParse(rp.LapsText, out var l) ? l : _race.LapsDefault;
+                    return entry;
                 }).ToList()
             };
 
             await _races.SaveAggregateAsync(aggregate);
             _race.SyncStatus = SyncStatus.NotSynced;
             await _races.SaveAggregateAsync(aggregate);
+            _loadedRaceParticipants = aggregate.RaceParticipants;
 
             RaceId = _race.Id;
             StatusMessage = "Saved locally. Syncing to server…";

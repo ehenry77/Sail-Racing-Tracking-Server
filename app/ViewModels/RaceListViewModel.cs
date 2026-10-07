@@ -61,4 +61,11 @@ public partial class RaceListViewModel : BaseViewModel
 
         await Shell.Current.GoToAsync($"{route}?raceId={race.Id}");
     }
+
+    // Open routes by status (a running race goes to its timing sheet), so editing needs its own entry point.
+    [RelayCommand]
+    private async Task EditAsync(Race race)
+    {
+        await Shell.Current.GoToAsync($"raceSetup?raceId={race.Id}");
+    }
 }

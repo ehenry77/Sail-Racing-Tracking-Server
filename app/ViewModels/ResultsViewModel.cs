@@ -38,6 +38,15 @@ public partial class ResultsViewModel : BaseViewModel
         Title = "Results";
     }
 
+    [RelayCommand]
+    private async Task EditRaceAsync()
+    {
+        if (!string.IsNullOrEmpty(RaceId))
+        {
+            await Shell.Current.GoToAsync($"raceSetup?raceId={RaceId}");
+        }
+    }
+
     public async Task OnAppearingAsync()
     {
         if (string.IsNullOrEmpty(RaceId))

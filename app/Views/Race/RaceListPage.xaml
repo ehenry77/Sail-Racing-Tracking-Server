@@ -12,7 +12,7 @@
             <CollectionView ItemsSource="{Binding Races}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Race">
-                        <Grid Padding="8" ColumnDefinitions="*,Auto">
+                        <Grid Padding="8" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                             <VerticalStackLayout Grid.Column="0">
                                 <Label Text="{Binding Name}" FontAttributes="Bold" />
                                 <Label Text="{Binding Status}" FontSize="12" />
@@ -20,7 +20,10 @@
                                        FontSize="12" TextColor="Gray"
                                        IsVisible="{Binding ScheduledStartTime, Converter={StaticResource NotNullConverter}}" />
                             </VerticalStackLayout>
-                            <Button Grid.Column="1" Text="Open"
+                            <Button Grid.Column="1" Text="Edit"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RaceListViewModel}}, Path=EditCommand}"
+                                    CommandParameter="{Binding .}" />
+                            <Button Grid.Column="2" Text="Open"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RaceListViewModel}}, Path=OpenCommand}"
                                     CommandParameter="{Binding .}" />
                         </Grid>

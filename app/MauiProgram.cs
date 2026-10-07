@@ -41,7 +41,9 @@ public static class MauiProgram
         builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(8) });
         builder.Services.AddSingleton<ISailRacingApiClient, SailRacingApiClient>();
         builder.Services.AddSingleton<IRaceSyncService, RaceSyncService>();
-        builder.Services.AddTransient<IStartSequenceService, StartSequenceService>();
+        // Singleton: one start sequence runs at a time, and it must survive leaving/re-entering the page.
+        // Transient would let a re-entered page start a second timer while the first keeps announcing.
+        builder.Services.AddSingleton<IStartSequenceService, StartSequenceService>();
         builder.Services.AddTransient<IRaceSocketClient, RaceSocketClient>();
         builder.Services.AddSingleton<IDeviceSettingsService, DeviceSettingsService>();
 

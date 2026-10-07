@@ -10,6 +10,9 @@
     <ScrollView>
         <VerticalStackLayout Padding="12" Spacing="16">
 
+            <Button Text="‹ Races" Command="{Binding BackToRacesCommand}" HorizontalOptions="Start"
+                    ToolTipProperties.Text="Back to the race list" />
+
             <Entry Placeholder="Race name" Text="{Binding RaceName}" />
 
             <Picker Title="Fleet" ItemsSource="{Binding Fleets}" ItemDisplayBinding="{Binding Name}"
@@ -86,7 +89,8 @@
 
             <HorizontalStackLayout Spacing="8">
                 <Button Text="Save" Command="{Binding SaveCommand}" />
-                <Button Text="Save &amp; Start Sequence" Command="{Binding StartSequenceCommand}" />
+                <Button Text="Save &amp; Start Sequence" Command="{Binding StartSequenceCommand}"
+                        IsVisible="{Binding IsSetupStage}" />
             </HorizontalStackLayout>
 
         </VerticalStackLayout>

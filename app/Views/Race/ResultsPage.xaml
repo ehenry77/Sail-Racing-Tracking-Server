@@ -6,8 +6,13 @@
              x:DataType="vm:ResultsViewModel"
              Title="{Binding Title}">
 
-    <Grid RowDefinitions="*,Auto,Auto" Padding="12" RowSpacing="8">
-        <CollectionView Grid.Row="0" ItemsSource="{Binding Results}">
+    <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="12" RowSpacing="8">
+        <HorizontalStackLayout Grid.Row="0" Spacing="8">
+            <Button Text="‹ Races" Command="{Binding BackToRacesCommand}" ToolTipProperties.Text="Back to the race list" />
+            <Button Text="Edit race" Command="{Binding EditRaceCommand}" />
+        </HorizontalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Results}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:ResultsEntry">
                     <Grid ColumnDefinitions="Auto,*,Auto" Padding="8">
@@ -20,7 +25,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Label Grid.Row="1" Text="{Binding StatusMessage}" TextColor="Gray" />
-        <Button Grid.Row="2" Text="Publish Results" Command="{Binding PublishCommand}" />
+        <Label Grid.Row="2" Text="{Binding StatusMessage}" TextColor="Gray" />
+        <Button Grid.Row="3" Text="Publish Results" Command="{Binding PublishCommand}" />
     </Grid>
 </ContentPage>

@@ -6,13 +6,18 @@
              x:DataType="vm:TimingSheetViewModel"
              Title="{Binding Title}">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
-        <Label Grid.Row="0" Text="{Binding ConnectionStatusText}" TextColor="OrangeRed" FontSize="12"
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
+        <HorizontalStackLayout Grid.Row="0" Spacing="8">
+            <Button Text="‹ Races" Command="{Binding BackToRacesCommand}" ToolTipProperties.Text="Back to the race list" />
+            <Button Text="Edit race" Command="{Binding EditRaceCommand}" />
+        </HorizontalStackLayout>
+
+        <Label Grid.Row="1" Text="{Binding ConnectionStatusText}" TextColor="OrangeRed" FontSize="12"
                IsVisible="{Binding HasConnectionIssue}" />
 
         <!-- Manual lap/finish-time entry: the offline-capable fallback to the server's GPS-based
              auto lap-counting, for when a competitor isn't tracking or the server is unreachable. -->
-        <Border Grid.Row="1" Padding="10" Stroke="Gray" StrokeShape="RoundRectangle 8"
+        <Border Grid.Row="2" Padding="10" Stroke="Gray" StrokeShape="RoundRectangle 8"
                 IsVisible="{Binding SelectedEntry, Converter={StaticResource NotNullConverter}}">
             <VerticalStackLayout Spacing="8">
                 <Label Text="{Binding SelectedEntry.ParticipantName}" FontAttributes="Bold" />
@@ -44,7 +49,7 @@
             </VerticalStackLayout>
         </Border>
 
-        <CollectionView Grid.Row="2" ItemsSource="{Binding Entries}"
+        <CollectionView Grid.Row="3" ItemsSource="{Binding Entries}"
                          SelectionMode="Single" SelectedItem="{Binding SelectedEntry}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:RaceTimingEntry">
@@ -85,7 +90,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <HorizontalStackLayout Grid.Row="3" Spacing="8">
+        <HorizontalStackLayout Grid.Row="4" Spacing="8">
             <Button Text="Shorten Course" Command="{Binding ShortenCourseCommand}" />
             <Button Text="View Results" Command="{Binding ViewResultsCommand}" />
         </HorizontalStackLayout>

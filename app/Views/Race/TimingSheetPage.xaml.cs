@@ -17,4 +17,10 @@ public partial class TimingSheetPage : ContentPage
         base.OnAppearing();
         await _viewModel.OnAppearingAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _viewModel.OnDisappearing();
+    }
 }

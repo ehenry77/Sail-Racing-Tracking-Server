@@ -16,12 +16,13 @@ public partial class StartSequencePage : ContentPage
     {
         InitializeComponent();
         BindingContext = _viewModel = viewModel;
-        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         await _viewModel.OnAppearingAsync();
 
         // Reflect whatever flag state we already know (e.g. resuming mid-sequence) without animating.
@@ -33,6 +34,7 @@ public partial class StartSequencePage : ContentPage
     {
         base.OnDisappearing();
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.OnDisappearing();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
