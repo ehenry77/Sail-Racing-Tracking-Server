@@ -126,6 +126,18 @@ function replaceRaceAggregate(dto: RaceDto, id: string, joinCode: string, create
 
 export function createRace(dto: RaceDto): { raceId: string; joinCode: string } {
   const id = dto.id || randomUUID();
+
+  // Idempotent: the committee app can re-send a create for a race the server already has (e.g. its
+  // local copy lost the join code). The upsert keeps the stored row's code, so returning a freshly
+  // generated one here would hand the app a code that no longer matches the server's.
+  const existing = db.prepare('SELECT createdAt, joinCode FROM races WHERE id = ?').get(id) as
+    | { createdAt: string; joinCode: string }
+    | undefined;
+  if (existing) {
+    replaceRaceAggregate(dto, id, existing.joinCode, existing.createdAt);
+    return { raceId: id, joinCode: existing.joinCode };
+  }
+
   const joinCode = uniqueJoinCode();
   const createdAt = new Date().toISOString();
   replaceRaceAggregate(dto, id, joinCode, createdAt);

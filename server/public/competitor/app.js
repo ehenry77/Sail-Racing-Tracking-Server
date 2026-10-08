@@ -62,12 +62,48 @@
       }
       const race = await res.json();
       raceNameEl.textContent = race.name;
-      raceSubEl.textContent = `Join code ${race.joinCode} — pick your boat to start tracking`;
-      renderRoster(race);
+
+      // A per-boat link from the committee app carries ?boat=<participantId> so the skipper doesn't
+      // have to find themselves in the roster.
+      const boatId = new URLSearchParams(window.location.search).get('boat');
+      const preselected = boatId && race.fleet.participants.find((p) => p.id === boatId);
+      if (preselected) {
+        raceSubEl.textContent = `Join code ${race.joinCode}`;
+        renderPreselected(race, preselected);
+      } else {
+        raceSubEl.textContent = `Join code ${race.joinCode} — pick your boat to start tracking`;
+        renderRoster(race);
+      }
     } catch (err) {
       errorEl.textContent = 'Could not load this race. Check the link and try again.';
       raceSubEl.textContent = '';
     }
+  }
+
+  function describeBoat(participant) {
+    return `${participant.name}${participant.helm ? ' — ' + participant.helm : ''}`;
+  }
+
+  function renderPreselected(race, participant) {
+    const heading = rosterCard.querySelector('strong');
+    heading.textContent = 'Your boat';
+    rosterEl.innerHTML = '';
+
+    const start = document.createElement('button');
+    start.className = 'roster-item';
+    start.textContent = `Start tracking — ${describeBoat(participant)}`;
+    start.addEventListener('click', () => startTracking(race, participant));
+    rosterEl.appendChild(start);
+
+    const other = document.createElement('button');
+    other.className = 'roster-item';
+    other.style.opacity = '0.7';
+    other.textContent = 'Not your boat? Choose another';
+    other.addEventListener('click', () => {
+      heading.textContent = 'Who are you?';
+      renderRoster(race);
+    });
+    rosterEl.appendChild(other);
   }
 
   function renderRoster(race) {
@@ -75,7 +111,7 @@
     for (const participant of race.fleet.participants) {
       const btn = document.createElement('button');
       btn.className = 'roster-item';
-      btn.textContent = `${participant.name}${participant.helm ? ' — ' + participant.helm : ''}`;
+      btn.textContent = describeBoat(participant);
       btn.addEventListener('click', () => startTracking(race, participant));
       rosterEl.appendChild(btn);
     }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Sail-Racing — Track me</title>
-<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="icon" type="image/png" href="/competitor/favicon.png" />
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -70,6 +70,8 @@
     <button id="stopBtn" style="background:#3a1c1c;border-color:#5a2c2c;">Stop tracking</button>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Absolute: this page is served at /race/<code>, so a relative src would resolve to /race/app.js
+       (which the /race/:code route answers with this same HTML). -->
+  <script src="/competitor/app.js"></script>
 </body>
 </html>
