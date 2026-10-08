@@ -72,15 +72,27 @@
             </CollectionView>
             <Button Text="+ Add mark" Command="{Binding AddBuoyCommand}" />
 
-            <Label Text="Laps per boat" FontAttributes="Bold" />
-            <CollectionView ItemsSource="{Binding RaceParticipants}" HeightRequest="160">
+            <Label Text="Boats — laps and join links" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding RaceParticipants}" HeightRequest="260">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:RaceParticipantEditItem">
-                        <HorizontalStackLayout Padding="4" Spacing="8">
-                            <Label Text="{Binding ParticipantName}" VerticalOptions="Center" LineBreakMode="TailTruncation" WidthRequest="160" />
-                            <Label Text="Laps:" VerticalOptions="Center" />
-                            <Entry Text="{Binding LapsText}" Keyboard="Numeric" WidthRequest="60" />
-                        </HorizontalStackLayout>
+                        <VerticalStackLayout Padding="4" Spacing="2" Margin="0,0,0,6">
+                            <HorizontalStackLayout Spacing="8">
+                                <Label Text="{Binding ParticipantName}" VerticalOptions="Center" LineBreakMode="TailTruncation" WidthRequest="160" />
+                                <Label Text="Laps:" VerticalOptions="Center" />
+                                <Entry Text="{Binding LapsText}" Keyboard="Numeric" WidthRequest="60" />
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="{Binding JoinLinkText}" FontSize="11" TextColor="Gray" VerticalOptions="Center"
+                                       LineBreakMode="MiddleTruncation" MaximumWidthRequest="380"
+                                       ToolTipProperties.Text="{Binding JoinLinkText}" />
+                                <Button Text="Copy link" FontSize="11" Padding="8,0" HeightRequest="26"
+                                        IsVisible="{Binding HasJoinUrl}"
+                                        ToolTipProperties.Text="Copy this boat's personal tracking link, to send to its skipper"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RaceSetupViewModel}}, Path=CopyJoinLinkCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

@@ -12,8 +12,11 @@
             <Button Text="Edit race" Command="{Binding EditRaceCommand}" />
         </HorizontalStackLayout>
 
-        <Label Grid.Row="1" Text="{Binding ConnectionStatusText}" TextColor="OrangeRed" FontSize="12"
-               IsVisible="{Binding HasConnectionIssue}" />
+        <VerticalStackLayout Grid.Row="1" Spacing="2">
+            <Label Text="{Binding ConnectionStatusText}" TextColor="OrangeRed" FontSize="12"
+                   IsVisible="{Binding HasConnectionIssue}" />
+            <Label Text="{Binding InfoMessage}" TextColor="Gray" FontSize="12" />
+        </VerticalStackLayout>
 
         <!-- Manual lap/finish-time entry: the offline-capable fallback to the server's GPS-based
              auto lap-counting, for when a competitor isn't tracking or the server is unreachable. -->
@@ -69,6 +72,16 @@
                                         </FormattedString>
                                     </Label.FormattedText>
                                 </Label>
+                                <HorizontalStackLayout Spacing="6">
+                                    <Label Text="{Binding JoinLinkText}" FontSize="11" TextColor="Gray" VerticalOptions="Center"
+                                           LineBreakMode="MiddleTruncation" MaximumWidthRequest="380"
+                                           ToolTipProperties.Text="{Binding JoinLinkText}" />
+                                    <Button Text="Copy link" FontSize="11" Padding="8,0" HeightRequest="26"
+                                            IsVisible="{Binding HasJoinUrl}"
+                                            ToolTipProperties.Text="Copy this boat's personal tracking link, to send to its skipper"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=CopyJoinLinkCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </HorizontalStackLayout>
                             </VerticalStackLayout>
                             <Label Grid.Column="1" Text="FINAL LAP" TextColor="OrangeRed" FontAttributes="Bold"
                                    VerticalOptions="Center" IsVisible="{Binding IsOnFinalLap}" />

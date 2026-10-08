@@ -181,6 +181,7 @@ public partial class RaceSetupViewModel : BaseViewModel
             {
                 ParticipantId = participant.Id,
                 ParticipantName = participant.Name,
+                JoinUrl = JoinLinks.Build(_race.JoinCode, participant.Id),
                 LapsText = (existingEntry?.Laps ?? int.Parse(string.IsNullOrWhiteSpace(LapsDefaultText) ? "3" : LapsDefaultText)).ToString()
             });
         }
@@ -343,18 +344,67 @@ public partial class RaceSetupViewModel : BaseViewModel
         // Fire-and-forget: the local save above is already complete and durable, so Save must never
         // make the committee wait on the network — a down/unreachable server just means this resolves
         // later (RaceSyncService's connectivity watcher retries it automatically in the background).
-        var raceId = _race.Id;
-        _ = _sync.PushAsync(raceId).ContinueWith(task =>
+        _ = SyncInBackgroundAsync(_race.Id);
+    }
+
+    private async Task SyncInBackgroundAsync(string raceId)
+    {
+        var synced = false;
+        Race? fresh = null;
+        try
         {
-            var synced = task.Status == TaskStatus.RanToCompletion && task.Result;
-            MainThread.BeginInvokeOnMainThread(() =>
+            synced = await _sync.PushAsync(raceId);
+            if (synced)
             {
-                if (RaceId == raceId)
-                {
-                    StatusMessage = synced ? "Saved and synced." : "Saved locally; will retry sync automatically.";
-                }
-            });
+                fresh = (await _races.GetAggregateAsync(raceId))?.Race;
+            }
+        }
+        catch
+        {
+            // Non-fatal: the race is saved locally and the connectivity watcher retries the push.
+        }
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (RaceId != raceId)
+            {
+                return;
+            }
+
+            if (fresh is not null)
+            {
+                // The sync stored the server-assigned join code on the database row. Copy it onto this
+                // view model's own copy too — otherwise the next Save would write the stale (empty) values
+                // back over it, and the race would be re-created on the server with a new code.
+                _race.RemoteRaceId = fresh.RemoteRaceId;
+                _race.JoinCode = fresh.JoinCode;
+                _race.SyncStatus = fresh.SyncStatus;
+                RefreshJoinLinks();
+            }
+
+            StatusMessage = synced ? "Saved and synced." : "Saved locally; will retry sync automatically.";
         });
+    }
+
+    private void RefreshJoinLinks()
+    {
+        foreach (var item in RaceParticipants)
+        {
+            item.JoinUrl = JoinLinks.Build(_race.JoinCode, item.ParticipantId);
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyJoinLinkAsync(RaceParticipantEditItem item)
+    {
+        if (!item.HasJoinUrl)
+        {
+            StatusMessage = "Join links appear once the race has synced to the server.";
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(item.JoinUrl);
+        StatusMessage = $"Copied the join link for {item.ParticipantName}.";
     }
 
     [RelayCommand]

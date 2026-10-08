@@ -29,6 +29,9 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     [ObservableProperty]
     private bool hasConnectionIssue;
 
+    [ObservableProperty]
+    private string infoMessage = string.Empty;
+
     /// <summary>The boat currently selected for manual lap/finish-time entry — the offline-capable
     /// fallback to the server's GPS-based auto lap-counting, e.g. when a competitor isn't tracking
     /// or the server is unreachable.</summary>
@@ -103,7 +106,8 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
                     IsOnFinalLap = rp.IsOnFinalLap,
                     Status = rp.Status,
                     FinishTime = rp.FinishTime,
-                    ElapsedSeconds = rp.ElapsedSeconds
+                    ElapsedSeconds = rp.ElapsedSeconds,
+                    JoinUrl = JoinLinks.Build(_race.JoinCode, rp.ParticipantId)
                 });
             }
 
@@ -352,6 +356,19 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         }
 
         await _races.SaveAggregateAsync(aggregate);
+    }
+
+    [RelayCommand]
+    private async Task CopyJoinLinkAsync(RaceTimingEntry entry)
+    {
+        if (!entry.HasJoinUrl)
+        {
+            InfoMessage = "Join links appear once the race has synced to the server.";
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(entry.JoinUrl);
+        InfoMessage = $"Copied the join link for {entry.ParticipantName}.";
     }
 
     [RelayCommand]

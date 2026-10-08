@@ -27,4 +27,13 @@ public partial class RaceTimingEntry : ObservableObject
 
     [ObservableProperty]
     private double? elapsedSeconds;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasJoinUrl))]
+    [NotifyPropertyChangedFor(nameof(JoinLinkText))]
+    private string? joinUrl;
+
+    public bool HasJoinUrl => !string.IsNullOrEmpty(JoinUrl);
+
+    public string JoinLinkText => JoinUrl ?? Services.JoinLinks.NotSyncedText;
 }
