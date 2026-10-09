@@ -36,6 +36,53 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
+    // Start sequence parameters (see StartSequenceSettings): alarms, spoken countdown, and the four signals.
+    [ObservableProperty]
+    private string sequenceAlarmsText = StartSequenceSettings.DefaultAlarmsText;
+
+    [ObservableProperty]
+    private string sequenceCountdownText = StartSequenceSettings.DefaultCountdownText;
+
+    [ObservableProperty]
+    private string sequenceSignalsText = StartSequenceSettings.DefaultSignalsText;
+
+    [ObservableProperty]
+    private string sequencePreview = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSequenceError))]
+    private string sequenceError = string.Empty;
+
+    public bool HasSequenceError => !string.IsNullOrEmpty(SequenceError);
+
+    partial void OnSequenceAlarmsTextChanged(string value) => UpdateSequencePreview();
+
+    partial void OnSequenceCountdownTextChanged(string value) => UpdateSequencePreview();
+
+    partial void OnSequenceSignalsTextChanged(string value) => UpdateSequencePreview();
+
+    private void UpdateSequencePreview()
+    {
+        if (StartSequenceSettings.TryParse(SequenceAlarmsText, SequenceCountdownText, SequenceSignalsText, out var settings, out var error))
+        {
+            SequencePreview = settings.Describe();
+            SequenceError = string.Empty;
+        }
+        else
+        {
+            SequencePreview = string.Empty;
+            SequenceError = error;
+        }
+    }
+
+    [RelayCommand]
+    private void ResetSequence()
+    {
+        SequenceAlarmsText = StartSequenceSettings.DefaultAlarmsText;
+        SequenceCountdownText = StartSequenceSettings.DefaultCountdownText;
+        SequenceSignalsText = StartSequenceSettings.DefaultSignalsText;
+    }
+
     public SettingsViewModel(IDeviceSettingsService devices)
     {
         _devices = devices;
@@ -54,6 +101,10 @@ public partial class SettingsViewModel : BaseViewModel
         try
         {
             ServerBaseUrlText = AppConfig.ServerBaseUrl;
+            SequenceAlarmsText = AppConfig.SequenceAlarmsText;
+            SequenceCountdownText = AppConfig.SequenceCountdownText;
+            SequenceSignalsText = AppConfig.SequenceSignalsText;
+            UpdateSequencePreview();
 
             await LoadCategoryAsync(AudioOutputDevices, _devices.GetAudioOutputDevicesAsync, AppConfig.PreferredAudioOutputDevice,
                 d => SelectedAudioOutputDevice = d);
@@ -93,6 +144,18 @@ public partial class SettingsViewModel : BaseViewModel
     [RelayCommand]
     private void Save()
     {
+        // Validate the start sequence first and save nothing if it's wrong — a half-saved settings page
+        // that silently kept the old sequence would only be discovered at the start of a race.
+        if (!StartSequenceSettings.TryParse(SequenceAlarmsText, SequenceCountdownText, SequenceSignalsText, out _, out var sequenceError))
+        {
+            StatusMessage = $"Not saved — start sequence: {sequenceError}";
+            return;
+        }
+
+        AppConfig.SequenceAlarmsText = SequenceAlarmsText.Trim();
+        AppConfig.SequenceCountdownText = SequenceCountdownText.Trim();
+        AppConfig.SequenceSignalsText = SequenceSignalsText.Trim();
+
         AppConfig.ServerBaseUrl = string.IsNullOrWhiteSpace(ServerBaseUrlText)
             ? AppConfig.ServerBaseUrl
             : ServerBaseUrlText.Trim();

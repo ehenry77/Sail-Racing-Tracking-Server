@@ -7,7 +7,9 @@ namespace SailRacing.Services;
 /// </summary>
 public class StartSequenceService : IStartSequenceService, IDisposable
 {
-    private readonly IReadOnlyList<SequenceEvent> _timeline = StartSequenceTimeline.Build();
+    // Built from the committee's settings each time a sequence starts, so a change in Settings applies to
+    // the next race without restarting the app.
+    private IReadOnlyList<SequenceEvent> _timeline = Array.Empty<SequenceEvent>();
     private readonly SemaphoreSlim _speechLock = new(1, 1);
 
     private IDispatcherTimer? _timer;
@@ -27,6 +29,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         _tickCts?.Cancel();
         _tickCts = null;
 
+        _timeline = StartSequenceTimeline.Build(AppConfig.LoadSequenceSettings());
         _startAt = startAt;
         _cursor = 0;
         _classFlagUp = false;
@@ -113,7 +116,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
     /// </summary>
     private async Task SpeakAsync(SequenceEvent evt)
     {
-        var text = StartSequenceTimeline.SpokenText(evt);
+        var text = evt.Text;
 
         if (evt.Type == SequenceEventType.CountdownTick)
         {

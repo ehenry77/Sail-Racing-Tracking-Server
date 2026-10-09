@@ -13,6 +13,28 @@
             <Label Text="Server" FontAttributes="Bold" />
             <Entry Placeholder="https://your-server" Text="{Binding ServerBaseUrlText}" />
 
+            <Label Text="Start sequence" FontAttributes="Bold" />
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="Alarm (minutes before start)" VerticalOptions="Center" WidthRequest="250" />
+                <Entry Text="{Binding SequenceAlarmsText}" Placeholder="-10,-6" WidthRequest="200"
+                       ToolTipProperties.Text="Get-ready alarms, in minutes before the start, separated by commas. Leave empty for none." />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="Countdown (seconds)" VerticalOptions="Center" WidthRequest="250" />
+                <Entry Text="{Binding SequenceCountdownText}" Placeholder="10" Keyboard="Numeric" WidthRequest="200"
+                       ToolTipProperties.Text="How many seconds are counted down out loud before each signal (0 to 30; 0 turns it off)." />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="Signals (class, P up, P down, start)" VerticalOptions="Center" WidthRequest="250" />
+                <Entry Text="{Binding SequenceSignalsText}" Placeholder="-5,-4,-1,0" WidthRequest="200"
+                       ToolTipProperties.Text="Class flag up, P flag up, P flag down, start — minutes before the start. The last one is the start, so it is 0." />
+            </HorizontalStackLayout>
+            <Label Text="{Binding SequencePreview}" FontSize="12" TextColor="Gray" />
+            <Label Text="{Binding SequenceError}" FontSize="12" TextColor="OrangeRed" IsVisible="{Binding HasSequenceError}" />
+            <Button Text="Reset to the standard 5-4-1-0 sequence" HorizontalOptions="Start" Command="{Binding ResetSequenceCommand}" />
+            <Label Text="Applies to the next start sequence you begin. Times are minutes before the start (with or without the minus sign); the sequence begins at the earliest of the alarms and the first signal."
+                   FontSize="12" TextColor="Gray" />
+
             <Label Text="Audio output (announcements speaker)" FontAttributes="Bold" />
             <Picker ItemsSource="{Binding AudioOutputDevices}" SelectedItem="{Binding SelectedAudioOutputDevice}">
                 <Picker.ItemDisplayBinding>

@@ -54,6 +54,36 @@ public static class AppConfig
         }
     }
 
+    // Start sequence parameters, stored as the text the committee typed so Settings shows it back exactly.
+    private const string SequenceAlarmsKey = "SequenceAlarms";
+    private const string SequenceCountdownKey = "SequenceCountdownSeconds";
+    private const string SequenceSignalsKey = "SequenceSignals";
+
+    public static string SequenceAlarmsText
+    {
+        get => Preferences.Default.Get(SequenceAlarmsKey, StartSequenceSettings.DefaultAlarmsText);
+        set => Preferences.Default.Set(SequenceAlarmsKey, value);
+    }
+
+    public static string SequenceCountdownText
+    {
+        get => Preferences.Default.Get(SequenceCountdownKey, StartSequenceSettings.DefaultCountdownText);
+        set => Preferences.Default.Set(SequenceCountdownKey, value);
+    }
+
+    public static string SequenceSignalsText
+    {
+        get => Preferences.Default.Get(SequenceSignalsKey, StartSequenceSettings.DefaultSignalsText);
+        set => Preferences.Default.Set(SequenceSignalsKey, value);
+    }
+
+    /// <summary>The sequence to run now. Stored values are validated when saved, but if they ever don't parse
+    /// (edited by hand, or from an older version) the standard 5-4-1-0 sequence is used rather than failing at the start.</summary>
+    public static StartSequenceSettings LoadSequenceSettings() =>
+        StartSequenceSettings.TryParse(SequenceAlarmsText, SequenceCountdownText, SequenceSignalsText, out var settings, out _)
+            ? settings
+            : StartSequenceSettings.Default;
+
     public static (string? Id, string? Name) PreferredGpsSensor
     {
         get => (Preferences.Default.Get<string?>(GpsSensorDeviceIdKey, null), Preferences.Default.Get<string?>(GpsSensorDeviceNameKey, null));

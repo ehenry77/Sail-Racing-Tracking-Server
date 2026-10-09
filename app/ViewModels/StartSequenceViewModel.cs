@@ -228,11 +228,12 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         }
 
         // Use the scheduled start time if one was set during setup and it's still ahead of us;
-        // otherwise the standard "gun in 10 minutes from right now" sequence.
+        // otherwise start the sequence right now, which puts the gun one full lead time (the earliest
+        // alarm or signal in Settings — 10 minutes with the standard sequence) from now.
         var now = DateTimeOffset.UtcNow;
         var startAt = _race.ScheduledStartTime is { } scheduled && scheduled > now
             ? scheduled
-            : now.AddMinutes(10);
+            : now + AppConfig.LoadSequenceSettings().LeadTime;
         var raceId = _race.Id;
 
         await SaveOwnedFieldsAsync(r =>
