@@ -1,6 +1,7 @@
 import path from 'path';
 import express from 'express';
 import racesRouter from './routes/races';
+import { startTrackRecorder } from './services/trackRecorder';
 import { attachWebSocketServer } from './ws/handlers';
 
 const app = express();
@@ -14,6 +15,9 @@ app.get('/race/:code', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'competitor', 'index.html'));
 });
 
+// Replay of a finished (or running) race from its recorded GPS traces.
+app.use('/replay', express.static(path.join(__dirname, '..', 'public', 'replay')));
+
 // Live map for spectators/committee.
 app.use('/map', express.static(path.join(__dirname, '..', 'public', 'map')));
 app.get('/', (_req, res) => res.redirect('/map'));
@@ -26,3 +30,4 @@ const server = app.listen(port, () => {
 });
 
 attachWebSocketServer(server);
+startTrackRecorder();

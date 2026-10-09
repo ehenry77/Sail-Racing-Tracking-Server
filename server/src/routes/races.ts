@@ -10,6 +10,8 @@ import {
   shortenCourse,
   updateRace
 } from '../db/raceStore';
+import { getTracks } from '../db/trackStore';
+import { flushTracks } from '../services/trackRecorder';
 import { broadcast } from '../ws/registry';
 import { RaceDto, ResultPublicationDto } from '../types/models';
 
@@ -56,6 +58,17 @@ router.get('/:id', (req, res) => {
   }
 
   res.json(race);
+});
+
+router.get('/:id/tracks', (req, res) => {
+  const race = getRace(req.params.id);
+  if (!race) {
+    res.status(404).json({ error: 'Race not found' });
+    return;
+  }
+
+  flushTracks(); // include fixes still waiting in the write buffer
+  res.json({ raceId: race.id, startAt: race.startAt, boats: getTracks(race.id) });
 });
 
 router.patch('/:id/shorten-course', (req, res) => {

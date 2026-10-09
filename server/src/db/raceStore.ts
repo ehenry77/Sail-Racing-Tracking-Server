@@ -267,6 +267,14 @@ export function saveResults(payload: ResultPublicationDto): void {
     for (const entry of payload.results) {
       rankUpdate.run(entry.status, entry.rank, entry.correctedSeconds, payload.raceId, entry.participantId);
     }
+
+    // Publishing results ends the race on the server too (the app only pushes status on a race save),
+    // which is what stops GPS trace recording.
+    db.prepare('UPDATE races SET status = ?, updatedAt = ? WHERE id = ?').run(
+      'Finished',
+      new Date().toISOString(),
+      payload.raceId
+    );
   });
 }
 

@@ -64,6 +64,18 @@ export function createSchema(db: DatabaseSync): void {
       PRIMARY KEY (raceId, participantId)
     );
 
+    -- One row per recorded GPS fix, kept for race replay. ts is epoch milliseconds (from the phone's
+    -- GPS timestamp), coordinates are rounded to 6 decimals (~0.1 m) on insert.
+    CREATE TABLE IF NOT EXISTS track_points (
+      raceId TEXT NOT NULL,
+      participantId TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      lat REAL NOT NULL,
+      lon REAL NOT NULL,
+      accuracy REAL
+    );
+    CREATE INDEX IF NOT EXISTS idx_track_points_race ON track_points (raceId, participantId, ts);
+
     CREATE TABLE IF NOT EXISTS results (
       raceId TEXT PRIMARY KEY REFERENCES races(id) ON DELETE CASCADE,
       publishedAt TEXT NOT NULL,

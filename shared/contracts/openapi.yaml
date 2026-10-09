@@ -133,6 +133,40 @@ paths:
             application/json:
               schema:
                 $ref: 'result.schema.json'
+  /api/races/{id}/tracks:
+    get:
+      summary: Recorded GPS traces for replay
+      description: >
+        Fixes are recorded from the start sequence until results are published. Each point is
+        [epoch milliseconds, latitude, longitude], oldest first. `startAt` is the race's start signal
+        (null if the sequence never started), used by the replay page for its T- / T+ clock.
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  raceId: { type: string, format: uuid }
+                  startAt: { type: [string, 'null'], format: date-time }
+                  boats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        participantId: { type: string }
+                        points:
+                          type: array
+                          items:
+                            type: array
+                            items: { type: number }
+                            minItems: 3
+                            maxItems: 3
+        '404':
+          description: Race not found
 components:
   parameters:
     RaceId:

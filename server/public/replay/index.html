@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sail-Racing — Race replay</title>
+<link rel="icon" type="image/png" href="/map/favicon.png" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  #map { flex: 1; min-height: 0; }
+  #legend {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    background: rgba(15, 20, 32, 0.9);
+    color: #eef2f7;
+    border-radius: 10px;
+    padding: 10px 14px;
+    max-width: 260px;
+    font-size: 0.9rem;
+  }
+  #legend h2 { margin: 0 0 6px; font-size: 1rem; }
+  .boat-row { display: flex; align-items: center; padding: 2px 0; }
+  .swatch { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex: none; border: 1px solid #fff; }
+  #controls {
+    background: #0f1420;
+    color: #eef2f7;
+    padding: 10px 14px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  #controls button, #controls select {
+    background: #1c2740;
+    color: #eef2f7;
+    border: 1px solid #2c3a58;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  #controls button:disabled { opacity: 0.5; cursor: default; }
+  #slider { flex: 1; min-width: 160px; }
+  #clock { font-variant-numeric: tabular-nums; min-width: 190px; text-align: right; }
+  .boat-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 4px rgba(0, 0, 0, 0.6); }
+  .boat-label { background: rgba(15, 20, 32, 0.8); color: #fff; border: none; box-shadow: none; font-size: 11px; }
+</style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="legend">
+    <h2 id="raceName">Loading…</h2>
+    <div id="boatList"></div>
+  </div>
+  <div id="controls">
+    <button id="play" disabled>▶ Play</button>
+    <label>Speed
+      <select id="speed">
+        <option value="1">1×</option>
+        <option value="5">5×</option>
+        <option value="10" selected>10×</option>
+        <option value="30">30×</option>
+        <option value="60">60×</option>
+      </select>
+    </label>
+    <input id="slider" type="range" min="0" max="1000" value="0" disabled />
+    <span id="clock">--</span>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="/replay/app.js"></script>
+</body>
+</html>
