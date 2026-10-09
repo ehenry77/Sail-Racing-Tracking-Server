@@ -169,8 +169,19 @@ paths:
         Fixes are recorded from the start sequence until results are published. Each point is
         [epoch milliseconds, latitude, longitude], oldest first. `startAt` is the race's start signal
         (null if the sequence never started), used by the replay page for its T- / T+ clock.
+        A live map doesn't need a whole race at full resolution, so the response can be limited with
+        `sinceMs` (only points at or after that epoch time) and `minGapMs` (thin each boat's points so
+        consecutive ones are at least that many milliseconds apart; capped at 60000).
       parameters:
         - $ref: '#/components/parameters/RaceId'
+        - name: sinceMs
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+        - name: minGapMs
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, maximum: 60000 }
       responses:
         '200':
           description: OK

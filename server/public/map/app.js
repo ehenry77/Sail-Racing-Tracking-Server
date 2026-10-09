@@ -14,6 +14,18 @@
 
   const STALE_AFTER_MS = 30000;
 
+  // Trails: history is fetched from the recorded fixes (the last half hour, thinned to one point every
+  // 5 s so a phone isn't sent a whole race), then extended live from the socket.
+  const TRAIL_WINDOW_MS = 30 * 60 * 1000;
+  const TRAIL_MIN_GAP_MS = 5000;
+  const MAX_TRAIL_POINTS = 3000;
+  const MIN_TRAIL_STEP_M = 3; // ignore GPS jitter while a boat sits still
+
+  // One colour per boat, by its place in the race's boat list. The golden-angle step keeps neighbouring
+  // boats' hues far apart however many there are, and alternating lightness separates close hues further.
+  // The replay page uses the same function so a boat keeps its colour there.
+  const boatColor = (i) => `hsl(${Math.round((i * 137.508) % 360)}, 75%, ${i % 2 ? 38 : 50}%)`;
+
   const map = L.map('map').setView([0, 0], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
@@ -82,27 +94,55 @@
   new FitControl().addTo(map);
 
   // --- Boats ---------------------------------------------------------------------------------------
-  function boatIcon(color) {
+  // The marker's fill is the boat's own colour (matching its trail and legend swatch); the ring around it
+  // carries race status — white normally, orange on the final lap, green once finished.
+  function boatIcon(color, ring) {
+    const width = ring === '#ffffff' ? 2 : 3;
     return L.divIcon({
       className: '',
-      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:${width}px solid ${ring};box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`,
       iconSize: [14, 14]
     });
   }
 
-  function colorFor(state) {
+  function ringFor(state) {
     if (state.finished) return '#2ecc71';
     if (state.isFinalLap) return '#ff6b35';
-    return '#3498db';
+    return '#ffffff';
   }
 
   function ensureBoat(participantId, name) {
     let state = boats.get(participantId);
     if (!state) {
-      state = { participantId, name: name ?? participantId, laps: 0, lapsCompleted: 0, isFinalLap: false, finished: false, lastSeen: null, marker: null, iconColor: null, infoEl: null, liveEl: null };
+      const color = boatColor(boats.size);
+      state = {
+        participantId, name: name ?? participantId, color,
+        laps: 0, lapsCompleted: 0, isFinalLap: false, finished: false,
+        lastSeen: null, marker: null, iconKey: null, infoEl: null, liveEl: null,
+        trail: L.polyline([], { color, weight: 3, opacity: 0.85 }).addTo(map),
+        trailPts: [], lastTrailTs: 0
+      };
       boats.set(participantId, state);
     }
     return state;
+  }
+
+  // Adds a fix to the boat's trail unless it's older than what's already drawn (history and live fixes
+  // overlap around a load or reconnect) or hasn't moved enough to matter.
+  function addTrailPoint(state, lat, lon, tsMs) {
+    if (!(tsMs > state.lastTrailTs)) return;
+    state.lastTrailTs = tsMs;
+
+    const last = state.trailPts[state.trailPts.length - 1];
+    if (last && L.latLng(last).distanceTo([lat, lon]) < MIN_TRAIL_STEP_M) return;
+
+    state.trailPts.push([lat, lon]);
+    if (state.trailPts.length > MAX_TRAIL_POINTS + 200) {
+      state.trailPts.splice(0, state.trailPts.length - MAX_TRAIL_POINTS);
+      state.trail.setLatLngs(state.trailPts);
+    } else {
+      state.trail.addLatLng([lat, lon]);
+    }
   }
 
   function isStale(state) {
@@ -111,10 +151,11 @@
 
   function refreshBoat(state) {
     if (state.marker) {
-      const color = colorFor(state);
-      if (color !== state.iconColor) {
-        state.marker.setIcon(boatIcon(color));
-        state.iconColor = color;
+      const ring = ringFor(state);
+      const key = state.color + ring;
+      if (key !== state.iconKey) {
+        state.marker.setIcon(boatIcon(state.color, ring));
+        state.iconKey = key;
       }
       state.marker.setOpacity(isStale(state) ? 0.45 : 1);
     }
@@ -145,9 +186,12 @@
     const seenAt = Date.parse(timestamp);
     state.lastSeen = Number.isFinite(seenAt) ? seenAt : Date.now();
 
+    addTrailPoint(state, lat, lon, state.lastSeen);
+
     if (!state.marker) {
-      state.iconColor = colorFor(state);
-      state.marker = L.marker(latLng, { icon: boatIcon(state.iconColor) })
+      const ring = ringFor(state);
+      state.iconKey = state.color + ring;
+      state.marker = L.marker(latLng, { icon: boatIcon(state.color, ring) })
         .bindTooltip(state.name, { permanent: true, direction: 'right', offset: [8, 0], className: 'boat-label' })
         .addTo(map);
     } else {
@@ -172,7 +216,10 @@
       const row = document.createElement('div');
       row.className = 'boat-row';
       const label = document.createElement('span');
-      label.textContent = state.name;
+      const swatch = document.createElement('span');
+      swatch.className = 'swatch';
+      swatch.style.background = state.color;
+      label.append(swatch, document.createTextNode(state.name));
       state.liveEl = document.createElement('span');
       state.infoEl = document.createElement('span');
       row.append(label, state.liveEl, state.infoEl);
@@ -182,6 +229,32 @@
   }
 
   // --- Loading ---------------------------------------------------------------------------------------
+  async function loadTrails(sinceMs) {
+    // History from the recorded fixes, so a map opened mid-race (or after a reconnect) already shows the
+    // traces so far. Points older than what a boat's trail already has are skipped, so it's safe to call
+    // repeatedly. Recording only runs from the start sequence on; before that, trails simply build up
+    // from the moment the map was opened.
+    try {
+      const res = await fetch(
+        `/api/races/${encodeURIComponent(raceId)}/tracks?sinceMs=${Math.floor(sinceMs)}&minGapMs=${TRAIL_MIN_GAP_MS}`
+      );
+      if (!res.ok) return;
+      const { boats: tracks } = await res.json();
+      for (const track of tracks) {
+        const state = ensureBoat(track.participantId);
+        for (const [ts, lat, lon] of track.points) addTrailPoint(state, lat, lon, ts);
+      }
+    } catch {
+      // Live fixes still draw the trails from here on.
+    }
+  }
+
+  function trailSince() {
+    // After a reconnect, only what was missed: from the oldest "last point" across the boats.
+    const seen = [...boats.values()].map((b) => b.lastTrailTs).filter((t) => t > 0);
+    return seen.length ? Math.min(...seen) - 1000 : Date.now() - TRAIL_WINDOW_MS;
+  }
+
   async function loadSnapshot() {
     // Where each boat was last seen — so boats already tracking (or sitting still) appear immediately
     // rather than only after their next fix. Older servers don't have this; that's fine.
@@ -248,6 +321,7 @@
     }
 
     fitToContent();
+    await loadTrails(Date.now() - TRAIL_WINDOW_MS);
     await loadSnapshot();
     connectSocket();
   }
@@ -262,7 +336,7 @@
     socket.addEventListener('open', () => {
       reconnectDelay = 1000;
       socket.send(JSON.stringify({ type: 'join', raceId, role: 'spectator' }));
-      loadSnapshot(); // catches anything missed while disconnected
+      loadTrails(trailSince()).then(loadSnapshot); // catches anything missed while disconnected
       refreshRaceState();
     });
 

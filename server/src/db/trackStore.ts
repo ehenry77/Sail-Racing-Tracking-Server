@@ -33,10 +33,20 @@ export function insertTrackPoints(points: TrackPoint[]): void {
   });
 }
 
-export function getTracks(raceId: string): BoatTrack[] {
-  const rows = db
-    .prepare('SELECT participantId, ts, lat, lon FROM track_points WHERE raceId = ? ORDER BY participantId, ts')
-    .all(raceId) as { participantId: string; ts: number; lat: number; lon: number }[];
+/**
+ * All recorded points for a race, per boat, oldest first. A live map doesn't need a whole race at full
+ * resolution on every load (a 30-boat race is ~160,000 points), so callers can limit it:
+ * `sinceMs` keeps only points at or after that time, and `minGapMs` thins each boat's points so
+ * consecutive ones are at least that far apart.
+ */
+export function getTracks(raceId: string, sinceMs?: number, minGapMs?: number): BoatTrack[] {
+  const sql =
+    'SELECT participantId, ts, lat, lon FROM track_points WHERE raceId = ?' +
+    (sinceMs !== undefined ? ' AND ts >= ?' : '') +
+    ' ORDER BY participantId, ts';
+  const rows = (
+    sinceMs !== undefined ? db.prepare(sql).all(raceId, sinceMs) : db.prepare(sql).all(raceId)
+  ) as { participantId: string; ts: number; lat: number; lon: number }[];
 
   const byBoat = new Map<string, TrackSample[]>();
   for (const row of rows) {
@@ -44,6 +54,10 @@ export function getTracks(raceId: string): BoatTrack[] {
     if (!points) {
       points = [];
       byBoat.set(row.participantId, points);
+    }
+
+    if (minGapMs && points.length > 0 && row.ts - points[points.length - 1][0] < minGapMs) {
+      continue;
     }
     points.push([row.ts, row.lat, row.lon]);
   }

@@ -54,13 +54,15 @@
     bounds.push([buoy.latitude, buoy.longitude]);
   }
 
-  const palette = ['#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#008080', '#f032e6', '#9a6324', '#800000', '#808000', '#000075', '#e6b800'];
+  // Same colour function and boat order as the live map, so a boat keeps its colour in both.
+  const boatColor = (i) => `hsl(${Math.round((i * 137.508) % 360)}, 75%, ${i % 2 ? 38 : 50}%)`;
+  const colorIndexOf = new Map(race.raceParticipants.map((p, i) => [p.participantId, i]));
   const nameOf = new Map(race.fleet.participants.map((p) => [p.id, p.name]));
 
   const boats = tracks.boats
     .filter((b) => b.points.length > 0)
     .map((b, i) => {
-      const color = palette[i % palette.length];
+      const color = boatColor(colorIndexOf.get(b.participantId) ?? colorIndexOf.size + i);
       const name = nameOf.get(b.participantId) ?? b.participantId;
       return {
         name,

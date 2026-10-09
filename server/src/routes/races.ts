@@ -78,8 +78,16 @@ router.get('/:id/tracks', (req, res) => {
     return;
   }
 
+  // Optional limits for a live map (see getTracks); anything that isn't a sensible number is ignored.
+  const optionalMs = (value: unknown, max: number): number | undefined => {
+    const n = Number(value);
+    return value !== undefined && Number.isFinite(n) && n >= 0 ? Math.min(n, max) : undefined;
+  };
+  const sinceMs = optionalMs(req.query.sinceMs, Number.MAX_SAFE_INTEGER);
+  const minGapMs = optionalMs(req.query.minGapMs, 60000);
+
   flushTracks(); // include fixes still waiting in the write buffer
-  res.json({ raceId: race.id, startAt: race.startAt, boats: getTracks(race.id) });
+  res.json({ raceId: race.id, startAt: race.startAt, boats: getTracks(race.id, sinceMs, minGapMs) });
 });
 
 router.patch('/:id/shorten-course', (req, res) => {
