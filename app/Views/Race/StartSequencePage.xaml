@@ -77,6 +77,39 @@
             <Button Text="All Clear — Start Race Mode" Command="{Binding AllClearCommand}"
                     IsVisible="{Binding IsSequenceComplete}" BackgroundColor="Green" TextColor="White" />
 
+            <!-- Competitor links stay available here once the race is launched. -->
+            <VerticalStackLayout Spacing="6" Margin="0,16,0,0">
+                <Label Text="Competitor links" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="6">
+                    <Label Text="{Binding MapLinkText}" FontSize="11" TextColor="Gray" VerticalOptions="Center"
+                           LineBreakMode="MiddleTruncation" MaximumWidthRequest="420" />
+                    <Button Text="Open live map" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasMapUrl}"
+                            Command="{Binding OpenMapCommand}" />
+                    <Button Text="Copy link" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasMapUrl}"
+                            Command="{Binding CopyMapLinkCommand}" />
+                </HorizontalStackLayout>
+
+                <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding BoatLinks}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BoatLinkItem">
+                            <VerticalStackLayout Spacing="1">
+                                <Label Text="{Binding ParticipantName}" FontSize="13" FontAttributes="Bold" />
+                                <HorizontalStackLayout Spacing="6">
+                                    <Label Text="{Binding JoinLinkText}" FontSize="11" TextColor="Gray" VerticalOptions="Center"
+                                           LineBreakMode="MiddleTruncation" MaximumWidthRequest="380" />
+                                    <Button Text="Copy link" FontSize="11" Padding="8,0" HeightRequest="26"
+                                            IsVisible="{Binding HasJoinUrl}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:StartSequenceViewModel}}, Path=CopyBoatLinkCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label Text="{Binding LinkMessage}" FontSize="12" TextColor="Gray" />
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

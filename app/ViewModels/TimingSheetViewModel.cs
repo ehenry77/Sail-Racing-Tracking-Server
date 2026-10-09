@@ -17,6 +17,8 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     private readonly IRaceSocketClient _socket;
     private readonly ISailRacingApiClient _api;
 
+    private readonly JoinCodeWatcher _joinWatcher;
+
     private Race? _race;
 
     public string? RaceId { get; set; }
@@ -72,7 +74,18 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         _participants = participants;
         _socket = socket;
         _api = api;
+        _joinWatcher = new JoinCodeWatcher(races);
         Title = "Timing Sheet";
+    }
+
+    private void OnJoinCodeArrived(Race fresh)
+    {
+        foreach (var entry in Entries)
+        {
+            entry.JoinUrl = JoinLinks.Build(fresh.JoinCode, entry.ParticipantId);
+        }
+
+        MapUrl = JoinLinks.BuildMap(fresh.JoinCode);
     }
 
     public async Task OnAppearingAsync()
@@ -119,6 +132,11 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
                     ElapsedSeconds = rp.ElapsedSeconds,
                     JoinUrl = JoinLinks.Build(_race.JoinCode, rp.ParticipantId)
                 });
+            }
+
+            if (string.IsNullOrEmpty(_race.JoinCode))
+            {
+                _joinWatcher.Start(_race.Id, OnJoinCodeArrived);
             }
 
             var connected = await _socket.ConnectAsync(_race.Id, "committee", participantId: null);
@@ -349,7 +367,10 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        aggregate.Race = _race;
+        // Copy only what this page changes onto the freshly loaded race. Replacing it with this page's
+        // own (load-time) copy would overwrite anything stored since — e.g. the join code from a sync.
+        aggregate.Race.Status = _race.Status;
+        aggregate.Race.ShortenCourseAppliedAt = _race.ShortenCourseAppliedAt;
         foreach (var entry in Entries)
         {
             var rp = aggregate.RaceParticipants.FirstOrDefault(x => x.ParticipantId == entry.ParticipantId);
@@ -413,6 +434,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
 
     public void OnDisappearing()
     {
+        _joinWatcher.Stop();
         _socket.MessageReceived -= OnMessageReceived;
         _ = _socket.DisconnectAsync();
     }

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SailRacing.Data;
@@ -10,13 +11,29 @@ namespace SailRacing.ViewModels;
 public partial class StartSequenceViewModel : BaseViewModel, IDisposable
 {
     private readonly IRaceRepository _races;
+    private readonly IParticipantRepository _participants;
     private readonly IStartSequenceService _sequence;
     private readonly ISailRacingApiClient _api;
+    private readonly JoinCodeWatcher _joinWatcher;
 
     private Race? _race;
     private IDispatcherTimer? _preStartTimer;
 
     public string? RaceId { get; set; }
+
+    public ObservableCollection<BoatLinkItem> BoatLinks { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMapUrl))]
+    [NotifyPropertyChangedFor(nameof(MapLinkText))]
+    private string? mapUrl;
+
+    public bool HasMapUrl => !string.IsNullOrEmpty(MapUrl);
+
+    public string MapLinkText => MapUrl is null ? JoinLinks.MapNotSyncedText : $"Live map: {MapUrl}";
+
+    [ObservableProperty]
+    private string linkMessage = string.Empty;
 
     [ObservableProperty]
     private bool classFlagUp;
@@ -46,11 +63,17 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     [ObservableProperty]
     private bool hasScheduledStartTime;
 
-    public StartSequenceViewModel(IRaceRepository races, IStartSequenceService sequence, ISailRacingApiClient api)
+    public StartSequenceViewModel(
+        IRaceRepository races,
+        IParticipantRepository participants,
+        IStartSequenceService sequence,
+        ISailRacingApiClient api)
     {
         _races = races;
+        _participants = participants;
         _sequence = sequence;
         _api = api;
+        _joinWatcher = new JoinCodeWatcher(races);
         Title = "Start Sequence";
     }
 
@@ -69,6 +92,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
 
         var aggregate = await _races.GetAggregateAsync(RaceId);
         _race = aggregate?.Race;
+        await LoadLinksAsync(aggregate);
 
         if (_race?.StartAt is not null)
         {
@@ -81,6 +105,80 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             HasScheduledStartTime = _race?.ScheduledStartTime is not null;
             StartPreStartTimer();
         }
+    }
+
+    private async Task LoadLinksAsync(RaceAggregate? aggregate)
+    {
+        BoatLinks.Clear();
+        if (aggregate is null)
+        {
+            return;
+        }
+
+        var participants = await _participants.GetByIdsAsync(aggregate.RaceParticipants.Select(rp => rp.ParticipantId));
+        foreach (var rp in aggregate.RaceParticipants)
+        {
+            BoatLinks.Add(new BoatLinkItem
+            {
+                ParticipantId = rp.ParticipantId,
+                ParticipantName = participants.FirstOrDefault(p => p.Id == rp.ParticipantId)?.Name ?? "(unknown)",
+                JoinUrl = JoinLinks.Build(aggregate.Race.JoinCode, rp.ParticipantId)
+            });
+        }
+
+        MapUrl = JoinLinks.BuildMap(aggregate.Race.JoinCode);
+
+        // The server assigns the join code during the background sync from Race Setup, which often lands a
+        // moment after this page loads — pick it up when it does rather than showing "not synced" until
+        // the next visit.
+        if (string.IsNullOrEmpty(aggregate.Race.JoinCode))
+        {
+            _joinWatcher.Start(aggregate.Race.Id, OnJoinCodeArrived);
+        }
+    }
+
+    private void OnJoinCodeArrived(Race fresh)
+    {
+        foreach (var item in BoatLinks)
+        {
+            item.JoinUrl = JoinLinks.Build(fresh.JoinCode, item.ParticipantId);
+        }
+
+        MapUrl = JoinLinks.BuildMap(fresh.JoinCode);
+    }
+
+    [RelayCommand]
+    private async Task OpenMapAsync()
+    {
+        if (MapUrl is not null)
+        {
+            await Launcher.Default.OpenAsync(new Uri(MapUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyMapLinkAsync()
+    {
+        if (MapUrl is null)
+        {
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(MapUrl);
+        LinkMessage = "Copied the live map link.";
+    }
+
+    [RelayCommand]
+    private async Task CopyBoatLinkAsync(BoatLinkItem item)
+    {
+        if (!item.HasJoinUrl)
+        {
+            LinkMessage = "Join links appear once the race has synced to the server.";
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(item.JoinUrl);
+        LinkMessage = $"Copied the join link for {item.ParticipantName}.";
     }
 
     private void StartPreStartTimer()
@@ -132,27 +230,45 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         // Use the scheduled start time if one was set during setup and it's still ahead of us;
         // otherwise the standard "gun in 10 minutes from right now" sequence.
         var now = DateTimeOffset.UtcNow;
-        _race.StartAt = _race.ScheduledStartTime is { } scheduled && scheduled > now
+        var startAt = _race.ScheduledStartTime is { } scheduled && scheduled > now
             ? scheduled
             : now.AddMinutes(10);
-        _race.Status = RaceStatus.StartSequence;
+        var raceId = _race.Id;
 
-        var aggregate = await _races.GetAggregateAsync(_race.Id);
-        if (aggregate is not null)
+        await SaveOwnedFieldsAsync(r =>
         {
-            aggregate.Race = _race;
-            await _races.SaveAggregateAsync(aggregate);
-        }
+            r.StartAt = startAt;
+            r.Status = RaceStatus.StartSequence;
+        });
 
         StopPreStartTimer();
         IsSequenceStarted = true;
-        StartAtText = FormatStartAt(_race.StartAt.Value);
-        _sequence.Start(_race.StartAt.Value);
+        StartAtText = FormatStartAt(startAt);
+        _sequence.Start(startAt);
 
         // Fire-and-forget: the sequence itself runs entirely off the locally-persisted StartAt and
         // must never wait on the network — a down server just means it catches up next time the
         // race syncs (RaceSyncService's connectivity watcher retries automatically).
-        _ = SafeCallAsync(() => _api.StartSequenceAsync(_race.Id, _race.StartAt.Value));
+        _ = SafeCallAsync(() => _api.StartSequenceAsync(raceId, startAt));
+    }
+
+    /// <summary>
+    /// Saves only the fields this page owns onto a freshly loaded race. Writing back this page's own
+    /// copy of the race (loaded when the page opened) would overwrite whatever happened since — most
+    /// importantly the join code, which the background sync from Race Setup usually stores a moment
+    /// after this page loads. That wiped the join links the moment the race was launched.
+    /// </summary>
+    private async Task SaveOwnedFieldsAsync(Action<Race> apply)
+    {
+        var aggregate = await _races.GetAggregateAsync(_race!.Id);
+        if (aggregate is null)
+        {
+            return;
+        }
+
+        apply(aggregate.Race);
+        await _races.SaveAggregateAsync(aggregate);
+        _race = aggregate.Race;
     }
 
     [RelayCommand]
@@ -163,19 +279,14 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        _race.Status = RaceStatus.Racing;
-        var aggregate = await _races.GetAggregateAsync(_race.Id);
-        if (aggregate is not null)
-        {
-            aggregate.Race = _race;
-            await _races.SaveAggregateAsync(aggregate);
-        }
+        var raceId = _race.Id;
+        await SaveOwnedFieldsAsync(r => r.Status = RaceStatus.Racing);
 
         // Fire-and-forget: the committee must be able to move into Race Mode immediately regardless
         // of server reachability — waiting here would block navigation for up to the HTTP timeout.
-        _ = SafeCallAsync(() => _api.AllClearAsync(_race.Id));
+        _ = SafeCallAsync(() => _api.AllClearAsync(raceId));
 
-        await Shell.Current.GoToAsync($"timingSheet?raceId={_race.Id}");
+        await Shell.Current.GoToAsync($"timingSheet?raceId={raceId}");
     }
 
     private static async Task SafeCallAsync(Func<Task> call)
@@ -222,6 +333,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     {
         _sequence.StatusChanged -= OnStatusChanged;
         StopPreStartTimer();
+        _joinWatcher.Stop();
     }
 
     public void Dispose() => OnDisappearing();
