@@ -5,26 +5,45 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Sail-Racing — Track me</title>
 <link rel="icon" type="image/png" href="/competitor/favicon.png" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <style>
-  :root { color-scheme: light dark; }
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    margin: 0;
-    padding: 20px;
-    max-width: 480px;
-    margin-inline: auto;
     background: #0b1220;
     color: #eef2f7;
   }
-  h1 { font-size: 1.25rem; margin-bottom: 4px; }
-  p.sub { color: #9aa7b8; margin-top: 0; }
+  /* The map is the page background; everything else floats over it. */
+  #map { position: fixed; inset: 0; z-index: 0; background: #0b1220; }
+  #ui {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    pointer-events: none; /* only the cards below catch touches, so the map stays draggable */
+  }
   .card {
-    background: #131c2e;
+    pointer-events: auto;
+    width: 100%;
+    max-width: 480px;
+    margin-inline: auto;
+    box-sizing: border-box;
+    background: rgba(19, 28, 46, 0.88);
     border: 1px solid #24304a;
     border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
+    padding: 12px 16px;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
+  #top h1 { font-size: 1.15rem; margin: 0 0 2px; }
+  p.sub { color: #b3bfcf; margin: 0; font-size: 0.9rem; }
+  #bottom { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; }
+  #rosterCard { overflow-y: auto; }
+  #rosterCard p { margin: 0 0 8px; }
   button, .roster-item {
     display: block;
     width: 100%;
@@ -38,38 +57,57 @@
     margin-bottom: 8px;
     cursor: pointer;
   }
+  .roster-item:last-child { margin-bottom: 0; }
   .roster-item:active, button:active { background: #24304a; }
   .status {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     font-weight: 600;
+    margin: 0 0 4px;
   }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: #666; }
   .dot.live { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
   .dot.stale { background: #e67e22; }
   .dot.off { background: #e74c3c; }
-  #error { color: #ff6b6b; }
+  #error { color: #ff8a8a; margin-top: 4px; }
+  #error:empty { display: none; }
   #hero { display: none; }
+  #hero button { margin: 8px 0 0; }
+  #hero .row { display: flex; gap: 8px; }
+  #hero .row button { text-align: center; }
+  .boat-label { background: rgba(15, 20, 32, 0.8); color: #fff; border: none; box-shadow: none; font-size: 11px; }
+  .me-label { background: #1565c0; font-weight: 700; }
 </style>
 </head>
 <body>
-  <h1 id="raceName">Sail-Racing</h1>
-  <p class="sub" id="raceSub">Loading race…</p>
+  <div id="map"></div>
 
-  <div id="error"></div>
+  <div id="ui">
+    <div class="card" id="top">
+      <h1 id="raceName">Sail-Racing</h1>
+      <p class="sub" id="raceSub">Loading race…</p>
+      <div id="error"></div>
+    </div>
 
-  <div class="card" id="rosterCard">
-    <p><strong>Who are you?</strong></p>
-    <div id="roster"></div>
+    <div id="bottom">
+      <div class="card" id="rosterCard">
+        <p><strong>Who are you?</strong></p>
+        <div id="roster"></div>
+      </div>
+
+      <div class="card" id="hero">
+        <p class="status"><span class="dot" id="statusDot"></span><span id="statusText">Not tracking</span></p>
+        <p class="sub" id="boatLabel"></p>
+        <div class="row">
+          <button id="centerBtn" type="button">Centre on me</button>
+          <button id="stopBtn" type="button" style="background:#3a1c1c;border-color:#5a2c2c;">Stop tracking</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="card" id="hero">
-    <p class="status"><span class="dot" id="statusDot"></span><span id="statusText">Not tracking</span></p>
-    <p class="sub" id="boatLabel"></p>
-    <button id="stopBtn" style="background:#3a1c1c;border-color:#5a2c2c;">Stop tracking</button>
-  </div>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <!-- Absolute: this page is served at /race/<code>, so a relative src would resolve to /race/app.js
        (which the /race/:code route answers with this same HTML). -->
   <script src="/competitor/app.js"></script>
