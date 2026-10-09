@@ -14,13 +14,22 @@ public partial class RaceTimingEntry : ObservableObject
     public int Laps { get; init; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRecordLap))]
     private int lapsCompleted;
 
     [ObservableProperty]
     private bool isOnFinalLap;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFinished))]
+    [NotifyPropertyChangedFor(nameof(CanRecordLap))]
     private RaceParticipantStatus status = RaceParticipantStatus.Racing;
+
+    public bool IsFinished => Status == RaceParticipantStatus.Finished;
+
+    /// <summary>A lap can only be recorded while the boat is still racing and has laps left — once the
+    /// last lap is done the boat is finished and the lap button is disabled.</summary>
+    public bool CanRecordLap => Status == RaceParticipantStatus.Racing && LapsCompleted < Laps;
 
     [ObservableProperty]
     private DateTimeOffset? finishTime;

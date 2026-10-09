@@ -81,6 +81,56 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         Title = "Timing Sheet";
     }
 
+    private void OnEntryPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RaceTimingEntry.LapsCompleted)
+            or nameof(RaceTimingEntry.Status)
+            or nameof(RaceTimingEntry.ElapsedSeconds)
+            or nameof(RaceTimingEntry.FinishTime))
+        {
+            ResortEntries();
+        }
+    }
+
+    /// <summary>
+    /// Leaderboard order: finished boats first (first across the line at the top), then boats still
+    /// racing by laps completed (most first), then boats that didn't finish (DNF/DNS/RET/OCS). Ties keep
+    /// their current order, so rows don't swap places for no reason. Entries are moved in place rather
+    /// than rebuilt so the list (and the selected boat) isn't reset on every lap.
+    /// Finish order is by elapsed time; the Results page is what applies TCF to rank corrected time.
+    /// </summary>
+    private void ResortEntries()
+    {
+        var selected = SelectedEntry;
+
+        var ordered = Entries
+            .OrderBy(e => e.Status switch
+            {
+                RaceParticipantStatus.Finished => 0,
+                RaceParticipantStatus.Racing => 1,
+                _ => 2
+            })
+            .ThenBy(e => e.Status == RaceParticipantStatus.Finished ? e.ElapsedSeconds ?? double.MaxValue : 0)
+            .ThenBy(e => e.Status == RaceParticipantStatus.Finished ? e.FinishTime ?? DateTimeOffset.MaxValue : DateTimeOffset.MinValue)
+            .ThenByDescending(e => e.Status == RaceParticipantStatus.Racing ? e.LapsCompleted : 0)
+            .ToList();
+
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var from = Entries.IndexOf(ordered[i]);
+            if (from != i)
+            {
+                Entries.Move(from, i);
+            }
+        }
+
+        // Moving rows can make the list drop its selection; keep the boat being edited open.
+        if (selected is not null && !ReferenceEquals(SelectedEntry, selected))
+        {
+            SelectedEntry = selected;
+        }
+    }
+
     private void OnJoinCodeArrived(Race fresh)
     {
         foreach (var entry in Entries)
@@ -124,7 +174,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
             foreach (var rp in aggregate.RaceParticipants)
             {
                 var participant = participants.FirstOrDefault(p => p.Id == rp.ParticipantId);
-                Entries.Add(new RaceTimingEntry
+                var entry = new RaceTimingEntry
                 {
                     ParticipantId = rp.ParticipantId,
                     ParticipantName = participant?.Name ?? "(unknown)",
@@ -136,8 +186,12 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
                     FinishTime = rp.FinishTime,
                     ElapsedSeconds = rp.ElapsedSeconds,
                     JoinUrl = JoinLinks.Build(_race.JoinCode, rp.ParticipantId)
-                });
+                };
+                entry.PropertyChanged += OnEntryPropertyChanged;
+                Entries.Add(entry);
             }
+
+            ResortEntries();
 
             if (string.IsNullOrEmpty(_race.JoinCode))
             {
@@ -272,6 +326,13 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     [RelayCommand]
     private async Task RecordLapNowAsync(RaceTimingEntry entry)
     {
+        // The button is disabled for a finished boat; this also stops a fast double-click on the last lap
+        // from counting an extra one.
+        if (!entry.CanRecordLap)
+        {
+            return;
+        }
+
         entry.LapsCompleted += 1;
 
         if (entry.LapsCompleted >= entry.Laps)
