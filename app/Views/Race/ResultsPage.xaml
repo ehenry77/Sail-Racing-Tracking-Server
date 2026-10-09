@@ -7,10 +7,21 @@
              Title="{Binding Title}">
 
     <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="12" RowSpacing="8">
-        <HorizontalStackLayout Grid.Row="0" Spacing="8">
-            <Button Text="‹ Races" Command="{Binding BackToRacesCommand}" ToolTipProperties.Text="Back to the race list" />
-            <Button Text="Edit race" Command="{Binding EditRaceCommand}" />
-        </HorizontalStackLayout>
+        <VerticalStackLayout Grid.Row="0" Spacing="6">
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="‹ Races" Command="{Binding BackToRacesCommand}" ToolTipProperties.Text="Back to the race list" />
+                <Button Text="Edit race" Command="{Binding EditRaceCommand}" />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="6">
+                <Label Text="{Binding ReplayLinkText}" FontSize="11" TextColor="Gray" VerticalOptions="Center"
+                       LineBreakMode="MiddleTruncation" MaximumWidthRequest="420" />
+                <Button Text="Open replay" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasReplayUrl}"
+                        ToolTipProperties.Text="Replay the race from its recorded GPS traces"
+                        Command="{Binding OpenReplayCommand}" />
+                <Button Text="Copy link" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasReplayUrl}"
+                        Command="{Binding CopyReplayLinkCommand}" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
 
         <CollectionView Grid.Row="1" ItemsSource="{Binding Results}">
             <CollectionView.ItemTemplate>

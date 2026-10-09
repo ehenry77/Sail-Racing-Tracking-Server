@@ -25,6 +25,38 @@ public partial class ResultsViewModel : BaseViewModel
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReplayUrl))]
+    [NotifyPropertyChangedFor(nameof(ReplayLinkText))]
+    private string? replayUrl;
+
+    public bool HasReplayUrl => !string.IsNullOrEmpty(ReplayUrl);
+
+    public string ReplayLinkText => ReplayUrl is null
+        ? "Replay: available once the race has synced to the server"
+        : $"Replay: {ReplayUrl}";
+
+    [RelayCommand]
+    private async Task OpenReplayAsync()
+    {
+        if (ReplayUrl is not null)
+        {
+            await Launcher.Default.OpenAsync(new Uri(ReplayUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyReplayLinkAsync()
+    {
+        if (ReplayUrl is null)
+        {
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(ReplayUrl);
+        StatusMessage = "Copied the replay link.";
+    }
+
     public ResultsViewModel(
         IRaceRepository races,
         IParticipantRepository participants,
@@ -61,6 +93,7 @@ public partial class ResultsViewModel : BaseViewModel
         }
 
         _race = aggregate.Race;
+        ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
 
         var participantIds = aggregate.RaceParticipants.Select(rp => rp.ParticipantId);
         var participants = await _participants.GetByIdsAsync(participantIds);

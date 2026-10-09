@@ -39,6 +39,9 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     [NotifyPropertyChangedFor(nameof(MapLinkText))]
     private string? mapUrl;
 
+    [ObservableProperty]
+    private string? replayUrl;
+
     public bool HasMapUrl => !string.IsNullOrEmpty(MapUrl);
 
     public string MapLinkText => MapUrl is null ? JoinLinks.MapNotSyncedText : $"Live map: {MapUrl}";
@@ -86,6 +89,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         }
 
         MapUrl = JoinLinks.BuildMap(fresh.JoinCode);
+        ReplayUrl = JoinLinks.BuildReplay(fresh.JoinCode);
     }
 
     public async Task OnAppearingAsync()
@@ -111,6 +115,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
 
             _race = aggregate.Race;
             MapUrl = JoinLinks.BuildMap(_race.JoinCode);
+            ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
 
             var participantIds = aggregate.RaceParticipants.Select(rp => rp.ParticipantId);
             var participants = await _participants.GetByIdsAsync(participantIds);
@@ -395,6 +400,15 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         if (MapUrl is not null)
         {
             await Launcher.Default.OpenAsync(new Uri(MapUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenReplayAsync()
+    {
+        if (ReplayUrl is not null)
+        {
+            await Launcher.Default.OpenAsync(new Uri(ReplayUrl));
         }
     }
 

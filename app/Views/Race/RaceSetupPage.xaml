@@ -81,6 +81,9 @@
                         Command="{Binding OpenMapCommand}" />
                 <Button Text="Copy link" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasMapUrl}"
                         Command="{Binding CopyMapLinkCommand}" />
+                <Button Text="Open replay" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasMapUrl}"
+                        ToolTipProperties.Text="Replay the race from its recorded GPS traces"
+                        Command="{Binding OpenReplayCommand}" />
             </HorizontalStackLayout>
 
             <Label Text="Boats — laps and join links" FontAttributes="Bold" />

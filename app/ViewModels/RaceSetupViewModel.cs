@@ -82,6 +82,9 @@ public partial class RaceSetupViewModel : BaseViewModel
     [NotifyPropertyChangedFor(nameof(MapLinkText))]
     private string? mapUrl;
 
+    [ObservableProperty]
+    private string? replayUrl;
+
     public bool HasMapUrl => !string.IsNullOrEmpty(MapUrl);
 
     public string MapLinkText => MapUrl is null ? JoinLinks.MapNotSyncedText : $"Live map: {MapUrl}";
@@ -117,6 +120,7 @@ public partial class RaceSetupViewModel : BaseViewModel
                 _loadedRaceParticipants = aggregate.RaceParticipants;
                 IsSetupStage = _race.Status == RaceStatus.Setup;
                 MapUrl = JoinLinks.BuildMap(_race.JoinCode);
+                ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
                 RaceName = _race.Name;
                 LapsDefaultText = _race.LapsDefault.ToString();
                 FinishSameAsStart = _race.FinishSameAsStart;
@@ -406,6 +410,15 @@ public partial class RaceSetupViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    private async Task OpenReplayAsync()
+    {
+        if (ReplayUrl is not null)
+        {
+            await Launcher.Default.OpenAsync(new Uri(ReplayUrl));
+        }
+    }
+
+    [RelayCommand]
     private async Task CopyMapLinkAsync()
     {
         if (MapUrl is null)
@@ -420,6 +433,7 @@ public partial class RaceSetupViewModel : BaseViewModel
     private void RefreshJoinLinks()
     {
         MapUrl = JoinLinks.BuildMap(_race.JoinCode);
+        ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
         foreach (var item in RaceParticipants)
         {
             item.JoinUrl = JoinLinks.Build(_race.JoinCode, item.ParticipantId);

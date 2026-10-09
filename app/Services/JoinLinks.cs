@@ -21,6 +21,17 @@ public static class JoinLinks
         return $"{AppConfig.ServerBaseUrl.TrimEnd('/')}/map?code={Uri.EscapeDataString(joinCode)}";
     }
 
+    /// <summary>Replay of the race from its recorded GPS traces.</summary>
+    public static string? BuildReplay(string? joinCode)
+    {
+        if (string.IsNullOrEmpty(joinCode))
+        {
+            return null;
+        }
+
+        return $"{AppConfig.ServerBaseUrl.TrimEnd('/')}/replay?code={Uri.EscapeDataString(joinCode)}";
+    }
+
     public static string? Build(string? joinCode, string participantId)
     {
         if (string.IsNullOrEmpty(joinCode))
