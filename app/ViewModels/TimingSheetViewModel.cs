@@ -32,6 +32,15 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     [ObservableProperty]
     private string infoMessage = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMapUrl))]
+    [NotifyPropertyChangedFor(nameof(MapLinkText))]
+    private string? mapUrl;
+
+    public bool HasMapUrl => !string.IsNullOrEmpty(MapUrl);
+
+    public string MapLinkText => MapUrl is null ? JoinLinks.MapNotSyncedText : $"Live map: {MapUrl}";
+
     /// <summary>The boat currently selected for manual lap/finish-time entry — the offline-capable
     /// fallback to the server's GPS-based auto lap-counting, e.g. when a competitor isn't tracking
     /// or the server is unreachable.</summary>
@@ -88,6 +97,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
             }
 
             _race = aggregate.Race;
+            MapUrl = JoinLinks.BuildMap(_race.JoinCode);
 
             var participantIds = aggregate.RaceParticipants.Select(rp => rp.ParticipantId);
             var participants = await _participants.GetByIdsAsync(participantIds);
@@ -356,6 +366,27 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         }
 
         await _races.SaveAggregateAsync(aggregate);
+    }
+
+    [RelayCommand]
+    private async Task OpenMapAsync()
+    {
+        if (MapUrl is not null)
+        {
+            await Launcher.Default.OpenAsync(new Uri(MapUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyMapLinkAsync()
+    {
+        if (MapUrl is null)
+        {
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(MapUrl);
+        InfoMessage = "Copied the live map link.";
     }
 
     [RelayCommand]

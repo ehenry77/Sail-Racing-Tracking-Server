@@ -77,6 +77,15 @@ public partial class RaceSetupViewModel : BaseViewModel
     [ObservableProperty]
     private bool isSetupStage = true;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMapUrl))]
+    [NotifyPropertyChangedFor(nameof(MapLinkText))]
+    private string? mapUrl;
+
+    public bool HasMapUrl => !string.IsNullOrEmpty(MapUrl);
+
+    public string MapLinkText => MapUrl is null ? JoinLinks.MapNotSyncedText : $"Live map: {MapUrl}";
+
     public RaceSetupViewModel(
         IRaceRepository races,
         IFleetRepository fleets,
@@ -107,6 +116,7 @@ public partial class RaceSetupViewModel : BaseViewModel
                 _race = aggregate.Race;
                 _loadedRaceParticipants = aggregate.RaceParticipants;
                 IsSetupStage = _race.Status == RaceStatus.Setup;
+                MapUrl = JoinLinks.BuildMap(_race.JoinCode);
                 RaceName = _race.Name;
                 LapsDefaultText = _race.LapsDefault.ToString();
                 FinishSameAsStart = _race.FinishSameAsStart;
@@ -386,8 +396,30 @@ public partial class RaceSetupViewModel : BaseViewModel
         });
     }
 
+    [RelayCommand]
+    private async Task OpenMapAsync()
+    {
+        if (MapUrl is not null)
+        {
+            await Launcher.Default.OpenAsync(new Uri(MapUrl));
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyMapLinkAsync()
+    {
+        if (MapUrl is null)
+        {
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(MapUrl);
+        StatusMessage = "Copied the live map link.";
+    }
+
     private void RefreshJoinLinks()
     {
+        MapUrl = JoinLinks.BuildMap(_race.JoinCode);
         foreach (var item in RaceParticipants)
         {
             item.JoinUrl = JoinLinks.Build(_race.JoinCode, item.ParticipantId);

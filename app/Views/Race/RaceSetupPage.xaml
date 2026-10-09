@@ -72,6 +72,17 @@
             </CollectionView>
             <Button Text="+ Add mark" Command="{Binding AddBuoyCommand}" />
 
+            <Label Text="Live map" FontAttributes="Bold" />
+            <HorizontalStackLayout Spacing="6">
+                <Label Text="{Binding MapLinkText}" FontSize="11" TextColor="Gray" VerticalOptions="Center"
+                       LineBreakMode="MiddleTruncation" MaximumWidthRequest="420" />
+                <Button Text="Open live map" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasMapUrl}"
+                        ToolTipProperties.Text="Open the live map of all boats in your browser"
+                        Command="{Binding OpenMapCommand}" />
+                <Button Text="Copy link" FontSize="11" Padding="8,0" HeightRequest="26" IsVisible="{Binding HasMapUrl}"
+                        Command="{Binding CopyMapLinkCommand}" />
+            </HorizontalStackLayout>
+
             <Label Text="Boats — laps and join links" FontAttributes="Bold" />
             <CollectionView ItemsSource="{Binding RaceParticipants}" HeightRequest="260">
                 <CollectionView.ItemTemplate>
