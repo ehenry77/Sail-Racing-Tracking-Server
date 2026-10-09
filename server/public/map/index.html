@@ -23,9 +23,22 @@
     font-size: 0.9rem;
   }
   #panel h2 { margin: 0 0 4px; font-size: 1rem; }
-  .boat-row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  .boat-row { display: flex; gap: 8px; padding: 2px 0; }
+  .boat-row > span:first-child { flex: 1; }
+  .tracking { font-size: 0.8rem; align-self: center; }
+  .tracking.live { color: #2ecc71; }
+  .tracking.stale { color: #9aa7b8; }
   .final-lap { color: #ff6b35; font-weight: 700; }
   .finished { color: #2ecc71; }
+  .boat-label { background: rgba(15, 20, 32, 0.8); color: #fff; border: none; box-shadow: none; font-size: 11px; }
+  .fit-button {
+    background: #fff;
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>

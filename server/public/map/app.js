@@ -12,15 +12,76 @@
     return;
   }
 
+  const STALE_AFTER_MS = 30000;
+
   const map = L.map('map').setView([0, 0], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19
   }).addTo(map);
 
-  const boatMarkers = new Map(); // participantId -> L.Marker
-  const boatState = new Map(); // participantId -> { name, isFinalLap, finished }
+  const courseLatLngs = []; // start line and marks that have coordinates
+  const boats = new Map(); // participantId -> state (see ensureBoat)
 
+  // --- Keeping the boats in view -------------------------------------------------------------------
+  // A race can have no course coordinates at all (they're optional), so there may be nothing to frame the
+  // map around — it would sit at 0,0 and the boats would be drawn thousands of km off-screen. Instead the
+  // map frames the course plus every boat, and re-frames whenever one wanders out of view, until the
+  // viewer pans or zooms themselves (then "Fit all boats" brings it back).
+  let autoFit = true;
+  let fitting = false;
+  let lastFitAt = 0;
+
+  function contentLatLngs() {
+    const points = [...courseLatLngs];
+    for (const b of boats.values()) {
+      if (b.marker) points.push(b.marker.getLatLng());
+    }
+    return points;
+  }
+
+  function fitToContent() {
+    const points = contentLatLngs();
+    if (points.length === 0) return;
+    fitting = true;
+    try {
+      map.fitBounds(L.latLngBounds(points), { padding: [50, 50], maxZoom: 16, animate: false });
+    } finally {
+      fitting = false;
+    }
+    lastFitAt = Date.now();
+  }
+
+  function ensureVisible() {
+    if (!autoFit) return;
+    const points = contentLatLngs();
+    if (points.length === 0) return;
+    const view = map.getBounds().pad(-0.05);
+    const allVisible = points.every((p) => view.contains(p));
+    if (!allVisible && Date.now() - lastFitAt > 1000) fitToContent();
+  }
+
+  map.on('movestart zoomstart', () => {
+    if (!fitting) autoFit = false;
+  });
+
+  const FitControl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const button = L.DomUtil.create('button', 'fit-button');
+      button.type = 'button';
+      button.textContent = 'Fit all boats';
+      L.DomEvent.disableClickPropagation(button);
+      L.DomEvent.on(button, 'click', () => {
+        autoFit = true;
+        fitToContent();
+      });
+      return button;
+    }
+  });
+  new FitControl().addTo(map);
+
+  // --- Boats ---------------------------------------------------------------------------------------
   function boatIcon(color) {
     return L.divIcon({
       className: '',
@@ -35,39 +96,122 @@
     return '#3498db';
   }
 
+  function ensureBoat(participantId, name) {
+    let state = boats.get(participantId);
+    if (!state) {
+      state = { participantId, name: name ?? participantId, laps: 0, lapsCompleted: 0, isFinalLap: false, finished: false, lastSeen: null, marker: null, iconColor: null, infoEl: null, liveEl: null };
+      boats.set(participantId, state);
+    }
+    return state;
+  }
+
+  function isStale(state) {
+    return state.lastSeen === null || Date.now() - state.lastSeen > STALE_AFTER_MS;
+  }
+
+  function refreshBoat(state) {
+    if (state.marker) {
+      const color = colorFor(state);
+      if (color !== state.iconColor) {
+        state.marker.setIcon(boatIcon(color));
+        state.iconColor = color;
+      }
+      state.marker.setOpacity(isStale(state) ? 0.45 : 1);
+    }
+
+    if (state.infoEl) {
+      // Labelled, because a bare "0/1" reads like "tracking 0 of 1 boats" rather than laps completed.
+      state.infoEl.textContent = state.finished ? 'Finished' : `laps ${state.lapsCompleted}/${state.laps}`;
+      state.infoEl.className = state.finished ? 'finished' : state.isFinalLap ? 'final-lap' : '';
+    }
+
+    if (state.liveEl) {
+      if (state.lastSeen === null) {
+        state.liveEl.textContent = '';
+      } else if (isStale(state)) {
+        state.liveEl.textContent = '○ no signal';
+        state.liveEl.className = 'tracking stale';
+      } else {
+        state.liveEl.textContent = '● live';
+        state.liveEl.className = 'tracking live';
+      }
+    }
+  }
+
+  function updatePosition(participantId, lat, lon, timestamp) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const state = ensureBoat(participantId);
+    const latLng = [lat, lon];
+    const seenAt = Date.parse(timestamp);
+    state.lastSeen = Number.isFinite(seenAt) ? seenAt : Date.now();
+
+    if (!state.marker) {
+      state.iconColor = colorFor(state);
+      state.marker = L.marker(latLng, { icon: boatIcon(state.iconColor) })
+        .bindTooltip(state.name, { permanent: true, direction: 'right', offset: [8, 0], className: 'boat-label' })
+        .addTo(map);
+    } else {
+      state.marker.setLatLng(latLng);
+    }
+
+    refreshBoat(state);
+    ensureVisible();
+  }
+
   function renderBoatList(race) {
     boatListEl.innerHTML = '';
     for (const rp of race.raceParticipants) {
       const participant = race.fleet.participants.find((p) => p.id === rp.participantId);
+      const state = ensureBoat(rp.participantId, participant ? participant.name : rp.participantId);
+      state.name = participant ? participant.name : rp.participantId;
+      state.laps = rp.laps;
+      state.lapsCompleted = rp.lapsCompleted;
+      state.isFinalLap = rp.isOnFinalLap;
+      state.finished = rp.status === 'Finished';
+
       const row = document.createElement('div');
       row.className = 'boat-row';
       const label = document.createElement('span');
-      label.textContent = participant ? participant.name : rp.participantId;
-      const info = document.createElement('span');
-      info.textContent = rp.status === 'Finished' ? 'Finished' : `${rp.lapsCompleted}/${rp.laps}`;
-      info.className = rp.status === 'Finished' ? 'finished' : rp.isOnFinalLap ? 'final-lap' : '';
-      row.append(label, info);
+      label.textContent = state.name;
+      state.liveEl = document.createElement('span');
+      state.infoEl = document.createElement('span');
+      row.append(label, state.liveEl, state.infoEl);
       boatListEl.appendChild(row);
-
-      boatState.set(rp.participantId, {
-        name: participant ? participant.name : rp.participantId,
-        isFinalLap: rp.isOnFinalLap,
-        finished: rp.status === 'Finished'
-      });
+      refreshBoat(state);
     }
   }
 
-  function updateBoatRowUI(participantId) {
-    const state = boatState.get(participantId);
-    if (!state) return;
-    const rows = boatListEl.querySelectorAll('.boat-row');
-    for (const row of rows) {
-      const label = row.firstChild;
-      if (label && label.textContent === state.name) {
-        const info = row.lastChild;
-        info.className = state.finished ? 'finished' : state.isFinalLap ? 'final-lap' : '';
-        info.textContent = state.finished ? 'Finished' : info.textContent;
+  // --- Loading ---------------------------------------------------------------------------------------
+  async function loadSnapshot() {
+    // Where each boat was last seen — so boats already tracking (or sitting still) appear immediately
+    // rather than only after their next fix. Older servers don't have this; that's fine.
+    try {
+      const res = await fetch(`/api/races/${encodeURIComponent(raceId)}/positions`);
+      if (!res.ok) return;
+      const { positions } = await res.json();
+      for (const p of positions) updatePosition(p.participantId, p.lat, p.lon, p.timestamp);
+    } catch {
+      // The live feed still works without it.
+    }
+  }
+
+  async function refreshRaceState() {
+    // Lap counts and finishes, re-read from the server — used on every (re)connect so a map that missed
+    // events while disconnected doesn't keep showing old numbers.
+    try {
+      const res = await fetch(`/api/races/${encodeURIComponent(raceId)}`);
+      if (!res.ok) return;
+      const race = await res.json();
+      for (const rp of race.raceParticipants) {
+        const state = ensureBoat(rp.participantId);
+        state.laps = rp.laps;
+        state.lapsCompleted = rp.lapsCompleted;
+        state.isFinalLap = rp.isOnFinalLap;
+        state.finished = rp.status === 'Finished';
+        refreshBoat(state);
       }
+    } catch {
+      // Keep what we have; live events continue.
     }
   }
 
@@ -85,92 +229,78 @@
     raceNameEl.textContent = race.name;
     renderBoatList(race);
 
-    const bounds = [];
-
+    const startLine = race.startLine;
     const hasStartLine =
-      race.startLine.committeeLatitude != null &&
-      race.startLine.committeeLongitude != null &&
-      race.startLine.pinLatitude != null &&
-      race.startLine.pinLongitude != null;
+      startLine.committeeLatitude != null && startLine.committeeLongitude != null &&
+      startLine.pinLatitude != null && startLine.pinLongitude != null;
     if (hasStartLine) {
-      const startLineLatLngs = [
-        [race.startLine.committeeLatitude, race.startLine.committeeLongitude],
-        [race.startLine.pinLatitude, race.startLine.pinLongitude]
-      ];
-      L.polyline(startLineLatLngs, { color: '#f1c40f', weight: 3 }).addTo(map);
-      bounds.push(...startLineLatLngs);
+      const line = [[startLine.committeeLatitude, startLine.committeeLongitude], [startLine.pinLatitude, startLine.pinLongitude]];
+      L.polyline(line, { color: '#f1c40f', weight: 3 }).addTo(map);
+      courseLatLngs.push(...line);
     }
 
     for (const buoy of race.buoys) {
-      if (buoy.latitude == null || buoy.longitude == null) {
-        continue; // not yet captured
-      }
-      L.circleMarker([buoy.latitude, buoy.longitude], {
-        radius: 6,
-        color: '#9b59b6',
-        fillColor: '#9b59b6',
-        fillOpacity: 0.8
-      })
+      if (buoy.latitude == null || buoy.longitude == null) continue; // not yet captured
+      L.circleMarker([buoy.latitude, buoy.longitude], { radius: 6, color: '#9b59b6', fillColor: '#9b59b6', fillOpacity: 0.8 })
         .bindTooltip(buoy.name)
         .addTo(map);
-      bounds.push([buoy.latitude, buoy.longitude]);
+      courseLatLngs.push([buoy.latitude, buoy.longitude]);
     }
 
-    if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [40, 40] });
-    }
-
+    fitToContent();
+    await loadSnapshot();
     connectSocket();
   }
+
+  // --- Live feed -------------------------------------------------------------------------------------
+  let reconnectDelay = 1000;
 
   function connectSocket() {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${proto}://${window.location.host}/ws`);
 
     socket.addEventListener('open', () => {
+      reconnectDelay = 1000;
       socket.send(JSON.stringify({ type: 'join', raceId, role: 'spectator' }));
+      loadSnapshot(); // catches anything missed while disconnected
+      refreshRaceState();
+    });
+
+    // A phone network blip, a proxy idle timeout or a laptop sleeping all drop the socket; without this
+    // the map would silently stop updating.
+    socket.addEventListener('close', () => {
+      setTimeout(connectSocket, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, 10000);
     });
 
     socket.addEventListener('message', (event) => {
       const message = JSON.parse(event.data);
+      const state = message.participantId ? ensureBoat(message.participantId) : null;
 
-      if (message.type === 'positionUpdate') {
-        const latLng = [message.lat, message.lon];
-        const state = boatState.get(message.participantId) ?? { name: message.participantId, isFinalLap: false, finished: false };
-        boatState.set(message.participantId, state);
-
-        let marker = boatMarkers.get(message.participantId);
-        if (!marker) {
-          marker = L.marker(latLng, { icon: boatIcon(colorFor(state)) }).bindTooltip(state.name).addTo(map);
-          boatMarkers.set(message.participantId, marker);
-        } else {
-          marker.setLatLng(latLng);
-          marker.setIcon(boatIcon(colorFor(state)));
-        }
-      }
-
-      if (message.type === 'finalLap') {
-        const state = boatState.get(message.participantId);
-        if (state) {
+      switch (message.type) {
+        case 'positionUpdate':
+          updatePosition(message.participantId, message.lat, message.lon, message.timestamp);
+          break;
+        case 'lapCompleted':
+          state.lapsCompleted = message.lapsCompleted;
+          state.isFinalLap = !!message.isFinalLap;
+          refreshBoat(state);
+          break;
+        case 'finalLap':
           state.isFinalLap = true;
-          const marker = boatMarkers.get(message.participantId);
-          if (marker) marker.setIcon(boatIcon(colorFor(state)));
-          updateBoatRowUI(message.participantId);
-        }
-      }
-
-      if (message.type === 'finished') {
-        const state = boatState.get(message.participantId);
-        if (state) {
+          refreshBoat(state);
+          break;
+        case 'finished':
           state.finished = true;
           state.isFinalLap = false;
-          const marker = boatMarkers.get(message.participantId);
-          if (marker) marker.setIcon(boatIcon(colorFor(state)));
-          updateBoatRowUI(message.participantId);
-        }
+          refreshBoat(state);
+          break;
       }
     });
   }
+
+  // Marker fading and the "live / no signal" labels depend on time passing, not only on messages.
+  setInterval(() => boats.forEach(refreshBoat), 5000);
 
   loadRace();
 })();

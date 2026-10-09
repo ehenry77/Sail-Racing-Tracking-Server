@@ -11,6 +11,7 @@ import {
   updateRace
 } from '../db/raceStore';
 import { getTracks } from '../db/trackStore';
+import { getLastPositions } from '../services/positionCache';
 import { flushTracks } from '../services/trackRecorder';
 import { broadcast } from '../ws/registry';
 import { RaceDto, ResultPublicationDto } from '../types/models';
@@ -58,6 +59,16 @@ router.get('/:id', (req, res) => {
   }
 
   res.json(race);
+});
+
+// Last known position of each boat, for a map opened mid-race (see positionCache).
+router.get('/:id/positions', (req, res) => {
+  if (!getRace(req.params.id)) {
+    res.status(404).json({ error: 'Race not found' });
+    return;
+  }
+
+  res.json({ positions: getLastPositions(req.params.id) });
 });
 
 router.get('/:id/tracks', (req, res) => {

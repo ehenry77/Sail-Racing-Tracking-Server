@@ -133,6 +133,35 @@ paths:
             application/json:
               schema:
                 $ref: 'result.schema.json'
+  /api/races/{id}/positions:
+    get:
+      summary: Last known position of each boat
+      description: >
+        Held in server memory only (a restart empties it until boats report again), so a map opened
+        mid-race can show boats immediately instead of waiting for each one's next fix. Use the
+        timestamp to tell a live boat from one that has gone quiet.
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        participantId: { type: string }
+                        lat: { type: number }
+                        lon: { type: number }
+                        accuracy: { type: [number, 'null'] }
+                        timestamp: { type: string, format: date-time }
+        '404':
+          description: Race not found
   /api/races/{id}/tracks:
     get:
       summary: Recorded GPS traces for replay

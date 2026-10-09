@@ -1,6 +1,7 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import { Server as HttpServer } from 'http';
 import { processPosition } from '../services/raceTracker';
+import { rememberPosition } from '../services/positionCache';
 import { recordPosition } from '../services/trackRecorder';
 import { broadcast, ClientRole, getClientInfo, registerClient, unregisterClient } from './registry';
 
@@ -60,6 +61,14 @@ export function attachWebSocketServer(server: HttpServer): void {
           },
           socket
         );
+
+        rememberPosition(info.raceId, {
+          participantId: message.participantId,
+          lat: message.lat,
+          lon: message.lon,
+          accuracy: message.accuracy ?? null,
+          timestamp
+        });
 
         recordPosition(
           info.raceId,
