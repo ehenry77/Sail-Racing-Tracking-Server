@@ -2,10 +2,12 @@
   const raceNameEl = document.getElementById('raceName');
   const boatListEl = document.getElementById('boatList');
 
+  // The map opens with either ?code=<join code> (what the committee app links to) or ?raceId=<race id>.
   const params = new URLSearchParams(window.location.search);
-  const raceId = params.get('raceId');
+  const code = params.get('code');
+  let raceId = params.get('raceId');
 
-  if (!raceId) {
+  if (!raceId && !code) {
     raceNameEl.textContent = 'No race specified';
     return;
   }
@@ -70,12 +72,16 @@
   }
 
   async function loadRace() {
-    const res = await fetch(`/api/races/${encodeURIComponent(raceId)}`);
+    const url = raceId
+      ? `/api/races/${encodeURIComponent(raceId)}`
+      : `/api/races/by-code/${encodeURIComponent(code)}`;
+    const res = await fetch(url);
     if (!res.ok) {
       raceNameEl.textContent = 'Race not found';
       return;
     }
     const race = await res.json();
+    raceId = race.id; // the live socket joins by race id, even when the page was opened by join code
     raceNameEl.textContent = race.name;
     renderBoatList(race);
 
