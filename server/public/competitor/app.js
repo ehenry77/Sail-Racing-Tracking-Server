@@ -10,6 +10,7 @@
   const boatLabel = document.getElementById('boatLabel');
   const stopBtn = document.getElementById('stopBtn');
   const centerBtn = document.getElementById('centerBtn');
+  const awakeText = document.getElementById('awakeText');
 
   const joinCode = window.location.pathname.split('/').filter(Boolean).pop();
 
@@ -19,6 +20,9 @@
   let lastSentAt = 0;
   let lastSentPos = null;
   let staleTimer = null;
+  let stopped = true;
+  let trackingRaceId = null;
+  let reconnectDelay = 1000;
 
   const MIN_SEND_INTERVAL_MS = 2000;
   const MIN_MOVE_METERS = 3;
@@ -208,19 +212,97 @@
     statusText.textContent = label;
   }
 
-  async function requestWakeLock() {
-    try {
-      if ('wakeLock' in navigator) {
+  // --- Keeping the screen on -------------------------------------------------------------------------
+  // A browser stops reading the GPS once the screen locks, so tracking only works while the screen is on
+  // and this page is in front. The Screen Wake Lock API (iOS 16.4+, Android Chrome; HTTPS only) holds the
+  // screen on; the browser drops it whenever the page is hidden, so it's re-requested each time the page
+  // comes back and whenever the browser releases it. Where the API is missing, a tiny invisible looping
+  // video is the long-standing trick that stops the screen sleeping. The skipper is always told which
+  // case they're in, because "set Auto-Lock to Never" is the only remedy when neither works.
+  let wantAwake = false;
+  let fallbackVideo = null;
+
+  function setAwakeText(ok, text) {
+    awakeText.textContent = text;
+    awakeText.style.color = ok ? '#7fe3a3' : '#ffb454';
+  }
+
+  async function acquireWakeLock() {
+    if (!wantAwake) return;
+    if ('wakeLock' in navigator) {
+      try {
         wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+          wakeLock = null;
+          if (wantAwake && document.visibilityState === 'visible') acquireWakeLock();
+        });
+        setAwakeText(true, 'Screen is kept awake');
+        return;
+      } catch {
+        // Refused (e.g. battery saver) — fall through to the video trick.
       }
-    } catch {
-      // best-effort; tracking still works without it, just riskier if the phone sleeps
     }
+    if (await startFallbackVideo()) {
+      setAwakeText(true, 'Screen is kept awake');
+    } else {
+      setAwakeText(false, 'Could not keep the screen awake — set Auto-Lock to Never in Settings > Display');
+    }
+  }
+
+  async function startFallbackVideo() {
+    if (fallbackVideo) return true;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 16;
+      if (!canvas.captureStream) return false;
+      const ctx = canvas.getContext('2d');
+      let flip = false;
+      const video = document.createElement('video');
+      video.setAttribute('playsinline', '');
+      video.muted = true;
+      video.loop = true;
+      video.style.cssText = 'position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0.02;pointer-events:none;';
+      video.srcObject = canvas.captureStream(5);
+      // Paint something different now and then so the stream really produces frames.
+      video._timer = setInterval(() => {
+        flip = !flip;
+        ctx.fillStyle = flip ? '#000' : '#010101';
+        ctx.fillRect(0, 0, 16, 16);
+      }, 500);
+      document.body.appendChild(video);
+      await video.play();
+      fallbackVideo = video;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function requestWakeLock() {
+    wantAwake = true;
+    return acquireWakeLock();
+  }
+
+  function releaseWakeLock() {
+    wantAwake = false;
+    if (wakeLock) {
+      wakeLock.release().catch(() => {});
+      wakeLock = null;
+    }
+    if (fallbackVideo) {
+      clearInterval(fallbackVideo._timer);
+      fallbackVideo.pause();
+      fallbackVideo.remove();
+      fallbackVideo = null;
+    }
+    awakeText.textContent = '';
   }
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && watchId !== null) {
-      requestWakeLock();
+      acquireWakeLock();
+      // The phone may have dropped the connection while the page was hidden.
+      if (!stopped && (!socket || socket.readyState > WebSocket.OPEN)) connectSocket(trackingRaceId, myId);
     }
   });
 
@@ -300,6 +382,7 @@
     socket = new WebSocket(`${proto}://${window.location.host}/ws`);
 
     socket.addEventListener('open', () => {
+      reconnectDelay = 1000;
       socket.send(JSON.stringify({ type: 'join', raceId, role: 'competitor', participantId }));
     });
 
@@ -315,8 +398,15 @@
       }
     });
 
+    // A phone network blip or a proxy timeout drops the socket; keep trying so tracking resumes by itself.
+    const thisSocket = socket;
     socket.addEventListener('close', () => {
-      setStatus('off', 'Disconnected — reopen this page to resume');
+      if (stopped || thisSocket !== socket) return;
+      setStatus('off', 'Connection lost — reconnecting…');
+      setTimeout(() => {
+        if (!stopped && thisSocket === socket) connectSocket(raceId, participantId);
+      }, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, 10000);
     });
   }
 
@@ -327,10 +417,15 @@
     setStatus('off', 'Connecting…');
 
     myId = participant.id;
+    trackingRaceId = race.id;
+    stopped = false;
     ensureBoat(myId, participant.name);
     follow = true;
     loadOthers(race.id);
 
+    // Both of these start inside the tap on "Start tracking", which iOS requires for the location
+    // permission prompt and for video playback. While the location is being read, iOS shows its location
+    // arrow in the status bar by itself — a web page can't switch that indicator on or off.
     connectSocket(race.id, participant.id);
     requestWakeLock();
 
@@ -366,7 +461,13 @@
           resetStaleTimer();
         }
       },
-      () => setStatus('off', 'Location permission denied'),
+      (err) =>
+        setStatus(
+          err && err.code === 1 ? 'off' : 'stale',
+          err && err.code === 1
+            ? 'Location is blocked — allow it for this site in your browser settings'
+            : 'Waiting for a GPS fix…'
+        ),
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
     );
   }
@@ -379,17 +480,20 @@
   }
 
   stopBtn.addEventListener('click', () => {
+    stopped = true;
     if (watchId !== null) {
       navigator.geolocation.clearWatch(watchId);
       watchId = null;
     }
+    if (staleTimer) {
+      clearTimeout(staleTimer);
+      staleTimer = null;
+    }
     if (socket) {
       socket.close();
     }
-    if (wakeLock) {
-      wakeLock.release().catch(() => {});
-    }
-    setStatus('off', 'Stopped');
+    releaseWakeLock();
+    setStatus('off', 'Stopped — location sharing is off');
   });
 
   loadRace();
