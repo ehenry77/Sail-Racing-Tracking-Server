@@ -28,14 +28,18 @@
 
             <!-- Flag stage: flags rest below the counter (row 2) and animate up above it (row 0)
                  when hoisted — see StartSequencePage.xaml.cs. Row heights must match FlagTravelDistance. -->
-            <Grid RowDefinitions="100,100,100" HorizontalOptions="Center" WidthRequest="320">
+            <Grid RowDefinitions="100,100,100" HorizontalOptions="Center" WidthRequest="320" IsClippedToBounds="False">
 
                 <Label Grid.Row="1" Text="{Binding CountdownText}" FontSize="64" HorizontalOptions="Center"
                        VerticalOptions="Center" IsVisible="{Binding IsSequenceStarted}" />
 
-                <HorizontalStackLayout Grid.Row="2" Spacing="36" HorizontalOptions="Center" VerticalOptions="Start">
+                <!-- The flag container spans the whole stage and each card sits at its bottom edge. A card translated
+                     outside its parent's bounds is clipped away on Windows (the flags vanished instead of rising),
+                     so the parent must cover the area the flags travel through. -->
+                <HorizontalStackLayout Grid.Row="0" Grid.RowSpan="3" Spacing="36" HorizontalOptions="Center"
+                                       VerticalOptions="Fill" IsClippedToBounds="False">
 
-                    <VerticalStackLayout x:Name="ClassFlagCard" HorizontalOptions="Center" Spacing="4">
+                    <VerticalStackLayout x:Name="ClassFlagCard" HorizontalOptions="Center" VerticalOptions="End" Spacing="4">
                         <Grid ColumnDefinitions="6,90" HeightRequest="60" WidthRequest="96">
                             <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
                             <HorizontalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0">
@@ -49,7 +53,7 @@
                                ToolTipProperties.Text="Warning signal — hoisted at the first signal time (Settings → Start sequence; 5 minutes before the start by default)" />
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout x:Name="PFlagCard" HorizontalOptions="Center" Spacing="4">
+                    <VerticalStackLayout x:Name="PFlagCard" HorizontalOptions="Center" VerticalOptions="End" Spacing="4">
                         <Grid ColumnDefinitions="6,60" HeightRequest="60" WidthRequest="66">
                             <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
                             <Border Grid.Column="1" BackgroundColor="#1565C0" Stroke="#0d47a1" StrokeThickness="1.5"
