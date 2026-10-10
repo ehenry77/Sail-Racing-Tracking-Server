@@ -23,12 +23,30 @@
     color: #eef2f7;
     border-radius: 10px;
     padding: 10px 14px;
-    max-width: 260px;
+    width: max-content;
+    max-width: min(440px, calc(100vw - 24px));
+    max-height: calc(100% - 24px);
+    overflow-y: auto;
+    box-sizing: border-box;
     font-size: 0.9rem;
   }
   #legend h2 { margin: 0 0 6px; font-size: 1rem; }
   .boat-row { display: flex; align-items: center; padding: 2px 0; }
   .swatch { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex: none; border: 1px solid #fff; }
+  #results { margin-top: 8px; border-top: 1px solid #2c3a58; padding-top: 6px; }
+  #results summary { cursor: pointer; font-weight: 600; }
+  #results table { border-collapse: collapse; margin-top: 6px; width: 100%; }
+  #results th { text-align: left; font-weight: 500; font-size: 0.75rem; color: #9aa7b8; padding: 2px 8px 2px 0; white-space: nowrap; }
+  #results td { padding: 3px 8px 3px 0; white-space: nowrap; }
+  #results td.num, #results th.num { font-variant-numeric: tabular-nums; }
+  #results td.strong { font-weight: 700; }
+  #results td.muted { color: #9aa7b8; white-space: normal; }
+  #results .swatch { display: inline-block; vertical-align: middle; }
+  @media (max-width: 520px) {
+    #results table { font-size: 0.72rem; }
+    #results td, #results th { padding-right: 5px; }
+    #results .swatch { margin-right: 4px; }
+  }
   #controls {
     background: #0f1420;
     color: #eef2f7;
@@ -59,6 +77,22 @@
   <div id="legend">
     <h2 id="raceName">Loading…</h2>
     <div id="boatList"></div>
+    <details id="results" open hidden>
+      <summary>Results</summary>
+      <table>
+        <thead>
+          <tr>
+            <th class="num" title="Rank by corrected time">Rank</th>
+            <th>Boat</th>
+            <th class="num" title="Time Correction Factor — the boat's handicap">TCF</th>
+            <th>Status</th>
+            <th class="num" title="Elapsed time from the start signal to the finish">Real time</th>
+            <th class="num" title="Real time × TCF — this decides the ranking">Corrected</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </details>
   </div>
   <div id="controls">
     <button id="play" disabled>▶ Play</button>

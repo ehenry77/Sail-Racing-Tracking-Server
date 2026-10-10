@@ -39,6 +39,77 @@
 
   const bounds = [];
 
+  // Same colour function and boat order as the live map, so a boat keeps its colour in both.
+  const boatColor = (i) => `hsl(${Math.round((i * 137.508) % 360)}, 75%, ${i % 2 ? 38 : 50}%)`;
+  const colorIndexOf = new Map(race.raceParticipants.map((p, i) => [p.participantId, i]));
+  const nameOf = new Map(race.fleet.participants.map((p) => [p.id, p.name]));
+  const tcfOf = new Map(race.fleet.participants.map((p) => [p.id, p.tcf]));
+
+  // --- Results ---------------------------------------------------------------------------------------
+  // The results the committee published (Results page > Publish Results). Shown whether or not traces
+  // were recorded, so it comes before the "no traces" early exit below.
+  const resultsBody = $('resultsBody');
+  const resultsBox = $('results');
+  // On a phone the table would cover the map; start it collapsed there (tap "Results" to open it).
+  if (window.innerWidth < 600) resultsBox.open = false;
+
+  function formatTime(seconds) {
+    if (seconds == null) return '–';
+    const s = Math.round(seconds);
+    return `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+  }
+
+  function cell(row, text, className) {
+    const td = document.createElement('td');
+    td.textContent = text;
+    if (className) td.className = className;
+    row.appendChild(td);
+    return td;
+  }
+
+  async function loadResults() {
+    let published = null;
+    try {
+      const res = await fetch(`/api/races/${encodeURIComponent(race.id)}/results`);
+      if (res.ok) published = await res.json();
+    } catch {
+      // Treated as "not published yet".
+    }
+
+    if (!published || !published.results || published.results.length === 0) {
+      resultsBox.hidden = false;
+      resultsBody.innerHTML = '';
+      const row = resultsBody.insertRow();
+      const td = cell(row, 'Results have not been published yet.', 'muted');
+      td.colSpan = 6;
+      return;
+    }
+
+    // Ranked finishers first (by rank), then the rest in the order they came.
+    const entries = [...published.results].sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9));
+    resultsBody.innerHTML = '';
+    for (const e of entries) {
+      const row = resultsBody.insertRow();
+      cell(row, e.rank ?? '–', 'num');
+      const boat = cell(row, '');
+      const swatch = document.createElement('span');
+      swatch.className = 'swatch';
+      const idx = colorIndexOf.get(e.participantId);
+      swatch.style.background = idx === undefined ? '#888' : boatColor(idx);
+      boat.append(swatch, document.createTextNode(nameOf.get(e.participantId) ?? e.participantId));
+      const tcf = tcfOf.get(e.participantId);
+      cell(row, tcf == null ? '–' : Number(tcf).toFixed(3), 'num');
+      cell(row, e.status);
+      cell(row, formatTime(e.elapsedSeconds), 'num');
+      cell(row, formatTime(e.correctedSeconds), 'num strong');
+    }
+    resultsBox.hidden = false;
+  }
+
+  const pad = (n) => String(n).padStart(2, '0');
+  loadResults();
+
+
   // Course: start line and marks, same rules as the live map (skip anything not yet captured).
   const sl = race.startLine;
   if (sl.committeeLatitude != null && sl.committeeLongitude != null && sl.pinLatitude != null && sl.pinLongitude != null) {
@@ -53,11 +124,6 @@
       .addTo(map);
     bounds.push([buoy.latitude, buoy.longitude]);
   }
-
-  // Same colour function and boat order as the live map, so a boat keeps its colour in both.
-  const boatColor = (i) => `hsl(${Math.round((i * 137.508) % 360)}, 75%, ${i % 2 ? 38 : 50}%)`;
-  const colorIndexOf = new Map(race.raceParticipants.map((p, i) => [p.participantId, i]));
-  const nameOf = new Map(race.fleet.participants.map((p) => [p.id, p.name]));
 
   const boats = tracks.boats
     .filter((b) => b.points.length > 0)
@@ -105,7 +171,6 @@
   let playing = false;
   let lastFrame = 0;
 
-  const pad = (n) => String(n).padStart(2, '0');
   function formatDuration(ms) {
     const s = Math.floor(Math.abs(ms) / 1000);
     const h = Math.floor(s / 3600);
