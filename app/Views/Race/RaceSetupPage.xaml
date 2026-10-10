@@ -15,10 +15,14 @@
 
             <Entry Placeholder="Race name" Text="{Binding RaceName}" />
 
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="Number of laps" VerticalOptions="Center"
+                       ToolTipProperties.Text="Laps each boat sails by default (you can still change it per boat below)" />
+                <Entry Placeholder="Default laps" Text="{Binding LapsDefaultText}" Keyboard="Numeric" WidthRequest="100" />
+            </HorizontalStackLayout>
+
             <Picker Title="Fleet" ItemsSource="{Binding Fleets}" ItemDisplayBinding="{Binding Name}"
                     SelectedItem="{Binding SelectedFleet}" />
-
-            <Entry Placeholder="Default laps" Text="{Binding LapsDefaultText}" Keyboard="Numeric" />
 
             <HorizontalStackLayout Spacing="8">
                 <CheckBox IsChecked="{Binding HasScheduledStartTime}" />
