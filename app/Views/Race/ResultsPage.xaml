@@ -23,20 +23,47 @@
             </HorizontalStackLayout>
         </VerticalStackLayout>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Results}">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="vm:ResultsEntry">
-                    <Grid ColumnDefinitions="Auto,*,Auto" Padding="8">
-                        <Label Grid.Column="0" Text="{Binding Rank}" FontAttributes="Bold" WidthRequest="32" />
-                        <Label Grid.Column="1" Text="{Binding ParticipantName}" />
-                        <Label Grid.Column="2" Text="{Binding Status}"
-                               ToolTipProperties.Text="Finished, DNF (Did Not Finish), DNS (Did Not Start), RET (Retired), or OCS (On Course Side / premature start)" />
-                    </Grid>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+        <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="2">
+            <Grid Grid.Row="0" ColumnDefinitions="40,*,70,90,90,120,120" Padding="8,0" ColumnSpacing="6">
+                <Label Grid.Column="0" Text="Rank" FontSize="12" TextColor="Gray" />
+                <Label Grid.Column="1" Text="Boat" FontSize="12" TextColor="Gray" />
+                <Label Grid.Column="2" Text="TCF" FontSize="12" TextColor="Gray"
+                       ToolTipProperties.Text="Time Correction Factor — the boat's handicap" />
+                <Label Grid.Column="3" Text="Status" FontSize="12" TextColor="Gray"
+                       ToolTipProperties.Text="Finished, DNF (Did Not Finish), DNS (Did Not Start), RET (Retired), or OCS (On Course Side / premature start)" />
+                <Label Grid.Column="4" Text="Finish" FontSize="12" TextColor="Gray"
+                       ToolTipProperties.Text="Clock time the boat finished" />
+                <Label Grid.Column="5" Text="Real time" FontSize="12" TextColor="Gray"
+                       ToolTipProperties.Text="Elapsed time from the start signal to the finish, h:mm:ss" />
+                <Label Grid.Column="6" Text="Corrected (TCF)" FontSize="12" TextColor="Gray"
+                       ToolTipProperties.Text="Real time x TCF — this decides the ranking" />
+            </Grid>
+
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Results}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ResultsEntry">
+                        <Grid ColumnDefinitions="40,*,70,90,90,120,120" Padding="8" ColumnSpacing="6">
+                            <Label Grid.Column="0" Text="{Binding RankText}" FontAttributes="Bold" />
+                            <VerticalStackLayout Grid.Column="1">
+                                <Label Text="{Binding ParticipantName}" />
+                                <Label Text="{Binding Helm}" FontSize="11" TextColor="Gray" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="{Binding TcfText}" />
+                            <Label Grid.Column="3" Text="{Binding Status}" />
+                            <Label Grid.Column="4" Text="{Binding FinishClockText}" />
+                            <Label Grid.Column="5" Text="{Binding ElapsedText}" />
+                            <Label Grid.Column="6" Text="{Binding CorrectedText}" FontAttributes="Bold" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
 
         <Label Grid.Row="2" Text="{Binding StatusMessage}" TextColor="Gray" />
-        <Button Grid.Row="3" Text="Publish Results" Command="{Binding PublishCommand}" />
+        <HorizontalStackLayout Grid.Row="3" Spacing="8">
+            <Button Text="Publish Results" Command="{Binding PublishCommand}" />
+            <Button Text="Export (CSV)" Command="{Binding ExportCommand}"
+                    ToolTipProperties.Text="Save the results as a spreadsheet-ready CSV file (Documents\Sail-Racing results)" />
+        </HorizontalStackLayout>
     </Grid>
 </ContentPage>

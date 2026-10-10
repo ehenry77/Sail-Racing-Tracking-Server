@@ -111,7 +111,10 @@ public partial class ResultsViewModel : BaseViewModel
             {
                 ParticipantId = rp.ParticipantId,
                 ParticipantName = participant?.Name ?? "(unknown)",
+                Helm = participant?.Helm ?? string.Empty,
+                Tcf = tcf,
                 Status = rp.Status,
+                FinishTime = rp.FinishTime,
                 ElapsedSeconds = rp.ElapsedSeconds,
                 CorrectedSeconds = corrected
             };
@@ -132,6 +135,76 @@ public partial class ResultsViewModel : BaseViewModel
         foreach (var entry in finishers.Concat(nonFinishers))
         {
             Results.Add(entry);
+        }
+    }
+
+    /// <summary>
+    /// Writes the results as a CSV that opens straight in Excel (UTF-8 with BOM; the column separator
+    /// follows the PC's list separator, so a Swiss/German Excel gets ';' and an English one ','), saves it
+    /// under Documents, and offers the platform share sheet on top.
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportAsync()
+    {
+        if (_race is null || Results.Count == 0)
+        {
+            StatusMessage = "Nothing to export yet.";
+            return;
+        }
+
+        try
+        {
+            var sep = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator;
+            string Field(string? value)
+            {
+                var v = value ?? string.Empty;
+                return v.Contains(sep) || v.Contains('"') || v.Contains('\n') ? $"\"{v.Replace("\"", "\"\"")}\"" : v;
+            }
+
+            string Row(params string?[] fields) => string.Join(sep, fields.Select(Field));
+
+            var lines = new List<string>
+            {
+                Row("Race", _race.Name),
+                Row("Start", _race.StartAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")),
+                Row("Corrected time = real (elapsed) time x TCF"),
+                string.Empty,
+                Row("Rank", "Boat", "Helm", "TCF", "Status", "Finish time", "Real time (elapsed)", "Corrected time (TCF)")
+            };
+
+            foreach (var r in Results)
+            {
+                lines.Add(Row(r.Rank?.ToString(), r.ParticipantName, r.Helm, r.TcfText, r.Status.ToString(),
+                    r.FinishClockText, r.ElapsedText, r.CorrectedText));
+            }
+
+            var safeName = string.Concat((string.IsNullOrWhiteSpace(_race.Name) ? "race" : _race.Name.Trim())
+                .Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+            var folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Sail-Racing results");
+            Directory.CreateDirectory(folder);
+            var filePath = Path.Combine(folder, $"{safeName} - results.csv");
+
+            await File.WriteAllTextAsync(filePath, string.Join("\r\n", lines) + "\r\n",
+                new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            StatusMessage = $"Exported to {filePath}";
+
+            try
+            {
+                await Share.Default.RequestAsync(new ShareFileRequest
+                {
+                    Title = "Export results",
+                    File = new ShareFile(filePath)
+                });
+            }
+            catch
+            {
+                // The share sheet is a convenience; the file is already saved where the message says.
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Export failed: {ex.Message}";
         }
     }
 
