@@ -64,3 +64,8 @@ export function getTracks(raceId: string, sinceMs?: number, minGapMs?: number): 
 
   return [...byBoat.entries()].map(([participantId, points]) => ({ participantId, points }));
 }
+
+/** Drops a race's recorded fixes — used when its start sequence is cancelled, so the aborted lead-in doesn't skew the replay. */
+export function deleteTracks(raceId: string): void {
+  db.prepare('DELETE FROM track_points WHERE raceId = ?').run(raceId);
+}

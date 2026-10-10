@@ -231,6 +231,15 @@ export function setStartAt(raceId: string, startAt: string): void {
   );
 }
 
+/** Puts every boat back to the pre-race state (no laps, not finished) — used when the start sequence is cancelled. */
+export function resetBoatStates(raceId: string): void {
+  db.prepare(
+    `UPDATE race_boat_state SET lapsCompleted = 0, isOnFinalLap = 0, status = 'Racing', finishTime = NULL,
+       elapsedSeconds = NULL, correctedSeconds = NULL, rank = NULL, currentTargetIndex = 0, armed = 1
+     WHERE raceId = ?`
+  ).run(raceId);
+}
+
 export function setAllClear(raceId: string): void {
   db.prepare('UPDATE races SET status = ?, updatedAt = ? WHERE id = ?').run(
     'Racing',

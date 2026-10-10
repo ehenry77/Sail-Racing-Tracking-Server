@@ -25,6 +25,15 @@ function isRecording(raceId: string): boolean {
   return recording;
 }
 
+/** Forgets a race's buffered-but-unwritten fixes and cached recording state (see deleteTracks). */
+export function forgetRace(raceId: string): void {
+  buffer = buffer.filter((p) => p.raceId !== raceId);
+  statusCache.delete(raceId);
+  for (const key of [...lastTimestamp.keys()]) {
+    if (key.startsWith(`${raceId}:`)) lastTimestamp.delete(key);
+  }
+}
+
 const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;
 
 export function recordPosition(

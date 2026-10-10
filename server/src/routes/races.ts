@@ -4,15 +4,16 @@ import {
   getRace,
   getRaceByCode,
   getResults,
+  resetBoatStates,
   saveResults,
   setAllClear,
   setStartAt,
   shortenCourse,
   updateRace
 } from '../db/raceStore';
-import { getTracks } from '../db/trackStore';
+import { deleteTracks, getTracks } from '../db/trackStore';
 import { getLastPositions } from '../services/positionCache';
-import { flushTracks } from '../services/trackRecorder';
+import { flushTracks, forgetRace } from '../services/trackRecorder';
 import { broadcast } from '../ws/registry';
 import { RaceDto, ResultPublicationDto } from '../types/models';
 
@@ -31,10 +32,19 @@ router.post('/', (req, res) => {
 
 router.put('/:id', (req, res) => {
   const dto = req.body as RaceDto;
+  const startWas = getRace(req.params.id)?.startAt ?? null;
   const updated = updateRace(req.params.id, dto);
   if (!updated) {
     res.status(404).json({ error: 'Race not found' });
     return;
+  }
+
+  // The committee cancelled the start sequence (its start time was cleared): throw away what was recorded
+  // during the aborted lead-in and put every boat back to the pre-race state.
+  if (startWas && !dto.startAt) {
+    forgetRace(req.params.id);
+    deleteTracks(req.params.id);
+    resetBoatStates(req.params.id);
   }
 
   broadcast(req.params.id, { type: 'raceStatusChanged', status: dto.status });

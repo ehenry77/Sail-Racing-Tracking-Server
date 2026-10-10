@@ -21,4 +21,10 @@ public interface IStartSequenceService
     void Start(DateTimeOffset startAt);
 
     void Stop();
+
+    /// <summary>
+    /// Abandons the sequence: stops the timeline, silences any announcement in progress, puts both flags
+    /// down and says "Start sequence cancelled". The next <see cref="Start"/> begins a fresh sequence.
+    /// </summary>
+    void Cancel();
 }

@@ -14,6 +14,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     private readonly IParticipantRepository _participants;
     private readonly IStartSequenceService _sequence;
     private readonly ISailRacingApiClient _api;
+    private readonly IRaceSyncService _sync;
     private readonly JoinCodeWatcher _joinWatcher;
 
     private Race? _race;
@@ -48,7 +49,15 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     private bool isSequenceComplete;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCancelSequence))]
     private bool isSequenceStarted;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCancelSequence))]
+    private bool isRaceRunning;
+
+    /// <summary>The sequence can be cancelled until All Clear — after that the race itself is under way.</summary>
+    public bool CanCancelSequence => IsSequenceStarted && !IsRaceRunning;
 
     [ObservableProperty]
     private string startAtText = string.Empty;
@@ -67,12 +76,14 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         IRaceRepository races,
         IParticipantRepository participants,
         IStartSequenceService sequence,
-        ISailRacingApiClient api)
+        ISailRacingApiClient api,
+        IRaceSyncService sync)
     {
         _races = races;
         _participants = participants;
         _sequence = sequence;
         _api = api;
+        _sync = sync;
         _joinWatcher = new JoinCodeWatcher(races);
         Title = "Start Sequence";
     }
@@ -92,6 +103,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
 
         var aggregate = await _races.GetAggregateAsync(RaceId);
         _race = aggregate?.Race;
+        IsRaceRunning = _race?.Status is RaceStatus.Racing or RaceStatus.Finished;
         await LoadLinksAsync(aggregate);
 
         if (_race?.StartAt is not null)
@@ -288,6 +300,52 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         _ = SafeCallAsync(() => _api.AllClearAsync(raceId));
 
         await Shell.Current.GoToAsync($"timingSheet?raceId={raceId}");
+    }
+
+    /// <summary>
+    /// Abandons the running start sequence and returns to the pre-start screen, ready to begin again.
+    /// Stops the timeline and announcements, puts the flags down, clears the race's start time locally
+    /// and then on the server (through the normal sync, so an offline venue just retries later).
+    /// </summary>
+    [RelayCommand]
+    private async Task CancelSequenceAsync()
+    {
+        if (_race is null || !CanCancelSequence)
+        {
+            return;
+        }
+
+        var confirmed = await Shell.Current.DisplayAlert(
+            "Cancel the start sequence?",
+            "The countdown stops, the flags come down and the race goes back to before the start. " +
+            "Positions recorded during this sequence are discarded. You can begin a new sequence afterwards.",
+            "Cancel sequence", "Keep running");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _sequence.Cancel();
+
+        var raceId = _race.Id;
+        await SaveOwnedFieldsAsync(r =>
+        {
+            r.StartAt = null;
+            r.Status = RaceStatus.Setup;
+        });
+
+        ClassFlagUp = false;
+        PFlagUp = false;
+        IsSequenceComplete = false;
+        IsSequenceStarted = false;
+        CountdownText = "--:--";
+        StartAtText = string.Empty;
+        HasScheduledStartTime = _race?.ScheduledStartTime is not null;
+        StartPreStartTimer();
+
+        // Fire-and-forget like every other server call: the cancel is already effective locally, and
+        // PushAsync marks the race for retry if the server can't be reached right now.
+        _ = SafeCallAsync(() => _sync.PushAsync(raceId));
     }
 
     private static async Task SafeCallAsync(Func<Task> call)

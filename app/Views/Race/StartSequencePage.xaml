@@ -81,6 +81,11 @@
             <Button Text="All Clear — Start Race Mode" Command="{Binding AllClearCommand}"
                     IsVisible="{Binding IsSequenceComplete}" BackgroundColor="Green" TextColor="White" />
 
+            <Button Text="Cancel sequence &amp; reset" Command="{Binding CancelSequenceCommand}"
+                    IsVisible="{Binding CanCancelSequence}" BackgroundColor="#B23A3A" TextColor="White"
+                    HorizontalOptions="Center"
+                    ToolTipProperties.Text="Abandon this start sequence (postponement or recall): the countdown stops, the flags come down and you can begin again" />
+
             <!-- Competitor links stay available here once the race is launched. -->
             <VerticalStackLayout Spacing="6" Margin="0,16,0,0">
                 <Label Text="Competitor links" FontAttributes="Bold" />

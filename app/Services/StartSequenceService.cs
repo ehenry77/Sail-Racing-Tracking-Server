@@ -18,6 +18,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
     private bool _classFlagUp;
     private bool _pFlagUp;
     private CancellationTokenSource? _tickCts;
+    private CancellationTokenSource _sessionCts = new();
 
     public bool IsRunning { get; private set; }
 
@@ -28,6 +29,8 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         Stop();
         _tickCts?.Cancel();
         _tickCts = null;
+        _sessionCts.Cancel();
+        _sessionCts = new CancellationTokenSource();
 
         _timeline = StartSequenceTimeline.Build(AppConfig.LoadSequenceSettings());
         _startAt = startAt;
@@ -66,6 +69,23 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         }
 
         IsRunning = false;
+    }
+
+    public void Cancel()
+    {
+        Stop();
+        _tickCts?.Cancel();
+        _tickCts = null;
+        _sessionCts.Cancel();
+        _sessionCts = new CancellationTokenSource();
+
+        _timeline = Array.Empty<SequenceEvent>();
+        _cursor = 0;
+        _classFlagUp = false;
+        _pFlagUp = false;
+        RaiseStatus(isComplete: false, timeToStart: TimeSpan.Zero);
+
+        _ = SpeakNowAsync("Start sequence cancelled", CancellationToken.None);
     }
 
     private void OnTick(object? sender, EventArgs e)
@@ -121,14 +141,14 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         if (evt.Type == SequenceEventType.CountdownTick)
         {
             _tickCts?.Cancel();
-            var cts = new CancellationTokenSource();
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
             _tickCts = cts;
             await SpeakNowAsync(text, cts.Token);
         }
         else
         {
             _tickCts?.Cancel();
-            await SpeakNowAsync(text, CancellationToken.None);
+            await SpeakNowAsync(text, _sessionCts.Token);
         }
     }
 
@@ -162,7 +182,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         }
     }
 
-    private void RaiseStatus()
+    private void RaiseStatus(bool? isComplete = null, TimeSpan? timeToStart = null)
     {
         var elapsed = DateTimeOffset.UtcNow - _startAt;
 
@@ -170,8 +190,8 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         {
             ClassFlagUp = _classFlagUp,
             PFlagUp = _pFlagUp,
-            TimeToStart = -elapsed,
-            IsComplete = _cursor >= _timeline.Count
+            TimeToStart = timeToStart ?? -elapsed,
+            IsComplete = isComplete ?? _cursor >= _timeline.Count
         });
     }
 
@@ -180,5 +200,6 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         Stop();
         _tickCts?.Cancel();
         _tickCts = null;
+        _sessionCts.Cancel();
     }
 }
