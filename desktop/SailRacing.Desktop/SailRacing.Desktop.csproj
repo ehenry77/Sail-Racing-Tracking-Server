@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- The committee app for desktops that .NET MAUI doesn't cover — Linux above all, but it runs on Windows
+	     and macOS too. Same models, database, sync, take-over, start sequence and view models as the MAUI app
+	     (SailRacing.Core); only the screens and the platform services are written here, with Avalonia. -->
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<RootNamespace>SailRacing.Desktop</RootNamespace>
+		<AssemblyName>SailRacing</AssemblyName>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+		<ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="11.3.22" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\core\SailRacing.Core\SailRacing.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<AvaloniaResource Include="Assets\**" />
+	</ItemGroup>
+
+</Project>

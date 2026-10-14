@@ -1,0 +1,57 @@
+<views:ScreenView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:SailRacing.Desktop.Views"
+             x:Class="SailRacing.Desktop.Views.FleetsView">
+
+	<Grid RowDefinitions="Auto,Auto,*" Margin="12" RowSpacing="12">
+
+		<Border Grid.Row="0" Classes="card" IsVisible="{Binding IsEditing}">
+			<StackPanel Spacing="8">
+				<TextBox Watermark="Fleet name" Text="{Binding EditName}" />
+				<TextBlock Text="Members" Classes="bold" />
+				<ScrollViewer MaxHeight="180">
+					<ItemsControl ItemsSource="{Binding EditParticipants}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</ScrollViewer>
+				<StackPanel Classes="row">
+					<Button Content="Save" Command="{Binding SaveCommand}" />
+					<Button Content="Cancel" Command="{Binding CancelEditCommand}" />
+				</StackPanel>
+			</StackPanel>
+		</Border>
+
+		<StackPanel Grid.Row="1" Spacing="4">
+			<StackPanel Classes="row">
+				<Button Content="Export" Command="{Binding ExportAllCommand}" />
+				<Button Content="Import" Command="{Binding ImportCommand}" />
+			</StackPanel>
+			<TextBlock Text="{Binding StatusMessage}" Classes="dim" />
+		</StackPanel>
+
+		<ScrollViewer Grid.Row="2">
+			<ItemsControl ItemsSource="{Binding Fleets}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Grid Margin="0,0,0,6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+							<TextBlock Grid.Column="0" Text="{Binding Name}" Classes="bold" VerticalAlignment="Center" />
+							<Button Grid.Column="1" Content="Edit"
+							        Command="{Binding $parent[ItemsControl].DataContext.EditCommand}" CommandParameter="{Binding}" />
+							<Button Grid.Column="2" Content="Delete"
+							        Command="{Binding $parent[ItemsControl].DataContext.DeleteCommand}" CommandParameter="{Binding}" />
+						</Grid>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</ScrollViewer>
+
+		<Button Grid.Row="2" Content="+" FontSize="24" Width="56" Height="56" CornerRadius="28"
+		        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+		        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,12"
+		        Command="{Binding AddNewCommand}" />
+	</Grid>
+</views:ScreenView>

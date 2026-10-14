@@ -1,0 +1,65 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SailRacing.Desktop.App"
+             RequestedThemeVariant="Default">
+
+	<Application.Styles>
+		<FluentTheme />
+
+		<!-- Shared look: the same few text and button styles on every screen. -->
+		<Style Selector="TextBlock.dim">
+			<Setter Property="Foreground" Value="Gray" />
+			<Setter Property="FontSize" Value="12" />
+		</Style>
+		<Style Selector="TextBlock.warn">
+			<Setter Property="Foreground" Value="OrangeRed" />
+			<Setter Property="FontSize" Value="12" />
+		</Style>
+		<Style Selector="TextBlock.bold">
+			<Setter Property="FontWeight" Value="Bold" />
+		</Style>
+		<Style Selector="Border.card">
+			<Setter Property="BorderBrush" Value="Gray" />
+			<Setter Property="BorderThickness" Value="1" />
+			<Setter Property="CornerRadius" Value="8" />
+			<Setter Property="Padding" Value="12" />
+		</Style>
+		<Style Selector="Button.small">
+			<Setter Property="FontSize" Value="11" />
+			<Setter Property="Padding" Value="8,0" />
+			<Setter Property="MinHeight" Value="26" />
+			<Setter Property="Height" Value="26" />
+		</Style>
+		<Style Selector="Button.danger">
+			<Setter Property="Background" Value="#B23A3A" />
+			<Setter Property="Foreground" Value="White" />
+		</Style>
+		<Style Selector="Button.go">
+			<Setter Property="Background" Value="#2E7D32" />
+			<Setter Property="Foreground" Value="White" />
+		</Style>
+		<Style Selector="StackPanel.row">
+			<Setter Property="Orientation" Value="Horizontal" />
+			<Setter Property="Spacing" Value="8" />
+		</Style>
+
+		<!-- The four tabs across the top. -->
+		<Style Selector="RadioButton.tab">
+			<Setter Property="Padding" Value="18,8" />
+			<Setter Property="Template">
+				<ControlTemplate>
+					<Border Name="Bar" Padding="{TemplateBinding Padding}" BorderThickness="0,0,0,3" BorderBrush="Transparent" Background="Transparent">
+						<ContentPresenter Content="{TemplateBinding Content}" FontWeight="SemiBold" />
+					</Border>
+				</ControlTemplate>
+			</Setter>
+		</Style>
+		<Style Selector="RadioButton.tab:checked /template/ Border#Bar">
+			<Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+		</Style>
+		<Style Selector="RadioButton.tab:pointerover /template/ Border#Bar">
+			<Setter Property="Background" Value="#22888888" />
+		</Style>
+	</Application.Styles>
+
+</Application>

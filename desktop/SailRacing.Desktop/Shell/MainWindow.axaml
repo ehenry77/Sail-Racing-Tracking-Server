@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SailRacing.Desktop.Shell.MainWindow"
+        Title="SailRacing"
+        Icon="/Assets/appicon.png"
+        Width="1100" Height="820" MinWidth="820" MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+
+	<DockPanel>
+		<Border DockPanel.Dock="Top" BorderBrush="#33888888" BorderThickness="0,0,0,1" Padding="12,4,12,0">
+			<StackPanel Orientation="Horizontal" Spacing="6">
+				<Image Source="/Assets/appicon.png" Width="28" Height="28" Margin="0,0,10,4" VerticalAlignment="Center" />
+				<RadioButton x:Name="TabCompetitors" Classes="tab" GroupName="tabs" Content="Competitors" />
+				<RadioButton x:Name="TabFleets" Classes="tab" GroupName="tabs" Content="Fleets" />
+				<RadioButton x:Name="TabRace" Classes="tab" GroupName="tabs" Content="Race" />
+				<RadioButton x:Name="TabSettings" Classes="tab" GroupName="tabs" Content="Settings" />
+			</StackPanel>
+		</Border>
+
+		<ContentControl x:Name="Host" />
+	</DockPanel>
+
+</Window>

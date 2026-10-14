@@ -1,0 +1,63 @@
+<views:ScreenView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:SailRacing.Desktop.Views"
+             x:Class="SailRacing.Desktop.Views.SettingsView">
+
+	<ScrollViewer>
+		<StackPanel Margin="12" Spacing="20" MaxWidth="760" HorizontalAlignment="Left">
+
+			<TextBlock Text="Server" Classes="bold" />
+			<TextBox Watermark="https://your-server" Text="{Binding ServerBaseUrlText}" />
+
+			<TextBlock Text="Start sequence" Classes="bold" />
+			<Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+				<TextBlock Grid.Row="0" Text="Alarm (minutes before start)" VerticalAlignment="Center" />
+				<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SequenceAlarmsText}" Watermark="-10,-6"
+				         ToolTip.Tip="Get-ready alarms, in minutes before the start, separated by commas. Leave empty for none." />
+				<TextBlock Grid.Row="1" Text="Countdown (seconds)" VerticalAlignment="Center" />
+				<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SequenceCountdownText}" Watermark="10"
+				         ToolTip.Tip="How many seconds are counted down out loud before each signal (0 to 30; 0 turns it off)." />
+				<TextBlock Grid.Row="2" Text="Signals (class, P up, P down, start)" VerticalAlignment="Center" />
+				<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SequenceSignalsText}" Watermark="-5,-4,-1,0"
+				         ToolTip.Tip="Class flag up, P flag up, P flag down, start — minutes before the start. The last one is the start, so it is 0." />
+			</Grid>
+			<TextBlock Text="{Binding SequencePreview}" Classes="dim" TextWrapping="Wrap" />
+			<TextBlock Text="{Binding SequenceError}" Classes="warn" IsVisible="{Binding HasSequenceError}" TextWrapping="Wrap" />
+			<Button Content="Reset to the standard 5-4-1-0 sequence" HorizontalAlignment="Left" Command="{Binding ResetSequenceCommand}" />
+			<TextBlock Classes="dim" TextWrapping="Wrap"
+			           Text="Applies to the next start sequence you begin. Times are minutes before the start (with or without the minus sign); the sequence begins at the earliest of the alarms and the first signal." />
+
+			<TextBlock Text="Audio output (announcements speaker)" Classes="bold" />
+			<ComboBox ItemsSource="{Binding AudioOutputDevices}" SelectedItem="{Binding SelectedAudioOutputDevice}" HorizontalAlignment="Stretch">
+				<ComboBox.ItemTemplate>
+					<DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+
+			<TextBlock Text="Audio input (microphone)" Classes="bold" />
+			<ComboBox ItemsSource="{Binding AudioInputDevices}" SelectedItem="{Binding SelectedAudioInputDevice}" HorizontalAlignment="Stretch">
+				<ComboBox.ItemTemplate>
+					<DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+
+			<TextBlock Text="Video input (camera)" Classes="bold" />
+			<ComboBox ItemsSource="{Binding VideoInputDevices}" SelectedItem="{Binding SelectedVideoInputDevice}" HorizontalAlignment="Stretch">
+				<ComboBox.ItemTemplate>
+					<DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+
+			<TextBlock Classes="dim" TextWrapping="Wrap"
+			           Text="On Linux the audio devices come from PulseAudio/PipeWire (pactl) and the cameras from /dev/video*. Nothing in the app streams audio/video yet — these are saved as preferences for a future feature to use. Spoken announcements need espeak-ng installed (sudo apt install espeak-ng); GPS capture is not available on this app — type coordinates in, or capture them with the Windows app." />
+
+			<TextBlock Text="{Binding StatusMessage}" Foreground="Gray" TextWrapping="Wrap" />
+
+			<StackPanel Classes="row">
+				<Button Content="Refresh devices" Command="{Binding LoadCommand}" />
+				<Button Content="Save" Command="{Binding SaveCommand}" />
+			</StackPanel>
+
+		</StackPanel>
+	</ScrollViewer>
+</views:ScreenView>

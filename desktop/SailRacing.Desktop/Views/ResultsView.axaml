@@ -1,0 +1,62 @@
+<views:ScreenView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:SailRacing.Desktop.Views"
+             x:Class="SailRacing.Desktop.Views.ResultsView">
+
+	<Grid RowDefinitions="Auto,*,Auto,Auto" Margin="12" RowSpacing="8">
+		<StackPanel Grid.Row="0" Spacing="6">
+			<StackPanel Classes="row">
+				<Button Content="‹ Races" Command="{Binding BackToRacesCommand}" ToolTip.Tip="Back to the race list" />
+				<Button Content="Edit race" Command="{Binding EditRaceCommand}" />
+			</StackPanel>
+			<StackPanel Orientation="Horizontal" Spacing="6">
+				<TextBlock Text="{Binding ReplayLinkText}" Classes="dim" VerticalAlignment="Center"
+				           TextTrimming="CharacterEllipsis" MaxWidth="520" />
+				<Button Content="Open replay" Classes="small" IsVisible="{Binding HasReplayUrl}"
+				        ToolTip.Tip="Replay the race from its recorded GPS traces" Command="{Binding OpenReplayCommand}" />
+				<Button Content="Copy link" Classes="small" IsVisible="{Binding HasReplayUrl}" Command="{Binding CopyReplayLinkCommand}" />
+			</StackPanel>
+		</StackPanel>
+
+		<Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="2">
+			<Grid Grid.Row="0" ColumnDefinitions="48,*,80,100,100,130,150" Margin="8,0" ColumnSpacing="6">
+				<TextBlock Grid.Column="0" Text="Rank" Classes="dim" />
+				<TextBlock Grid.Column="1" Text="Boat" Classes="dim" />
+				<TextBlock Grid.Column="2" Text="TCF" Classes="dim" ToolTip.Tip="Time Correction Factor — the boat's handicap" />
+				<TextBlock Grid.Column="3" Text="Status" Classes="dim"
+				           ToolTip.Tip="Finished, DNF (Did Not Finish), DNS (Did Not Start), RET (Retired), or OCS (On Course Side / premature start)" />
+				<TextBlock Grid.Column="4" Text="Finish" Classes="dim" ToolTip.Tip="Clock time the boat finished" />
+				<TextBlock Grid.Column="5" Text="Real time" Classes="dim" ToolTip.Tip="Elapsed time from the start signal to the finish, h:mm:ss" />
+				<TextBlock Grid.Column="6" Text="Corrected (TCF)" Classes="dim" ToolTip.Tip="Real time × TCF — this decides the ranking" />
+			</Grid>
+
+			<ScrollViewer Grid.Row="1">
+				<ItemsControl ItemsSource="{Binding Results}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid ColumnDefinitions="48,*,80,100,100,130,150" Margin="8,6" ColumnSpacing="6">
+								<TextBlock Grid.Column="0" Text="{Binding RankText}" Classes="bold" />
+								<StackPanel Grid.Column="1">
+									<TextBlock Text="{Binding ParticipantName}" />
+									<TextBlock Text="{Binding Helm}" Classes="dim" />
+								</StackPanel>
+								<TextBlock Grid.Column="2" Text="{Binding TcfText}" />
+								<TextBlock Grid.Column="3" Text="{Binding Status}" />
+								<TextBlock Grid.Column="4" Text="{Binding FinishClockText}" />
+								<TextBlock Grid.Column="5" Text="{Binding ElapsedText}" />
+								<TextBlock Grid.Column="6" Text="{Binding CorrectedText}" Classes="bold" />
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
+		</Grid>
+
+		<TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Classes="dim" TextWrapping="Wrap" />
+		<StackPanel Grid.Row="3" Classes="row">
+			<Button Content="Publish Results" Command="{Binding PublishCommand}" />
+			<Button Content="Export (CSV)" Command="{Binding ExportCommand}"
+			        ToolTip.Tip="Save the results as a spreadsheet-ready CSV file (Documents/Sail-Racing results)" />
+		</StackPanel>
+	</Grid>
+</views:ScreenView>

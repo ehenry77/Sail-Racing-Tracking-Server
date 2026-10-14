@@ -1,0 +1,118 @@
+<views:ScreenView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:SailRacing.Desktop.Views"
+             x:Class="SailRacing.Desktop.Views.TimingSheetView">
+
+	<views:ScreenView.Styles>
+		<!-- Finished boats turn green so the leaderboard reads at a glance. -->
+		<Style Selector="Border.entry">
+			<Setter Property="BorderBrush" Value="LightGray" />
+		</Style>
+		<Style Selector="Border.entry.finished">
+			<Setter Property="Background" Value="#332E7D32" />
+			<Setter Property="BorderBrush" Value="#2E7D32" />
+		</Style>
+		<Style Selector="ListBoxItem">
+			<Setter Property="Padding" Value="0" />
+			<Setter Property="Margin" Value="0,0,0,6" />
+		</Style>
+	</views:ScreenView.Styles>
+
+	<Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="12" RowSpacing="8">
+		<StackPanel Grid.Row="0" Classes="row">
+			<Button Content="‹ Races" Command="{Binding BackToRacesCommand}" ToolTip.Tip="Back to the race list" />
+			<Button Content="Edit race" Command="{Binding EditRaceCommand}" />
+		</StackPanel>
+
+		<StackPanel Grid.Row="1" Spacing="4">
+			<StackPanel Orientation="Horizontal" Spacing="6">
+				<TextBlock Text="{Binding MapLinkText}" Classes="dim" VerticalAlignment="Center"
+				           TextTrimming="CharacterEllipsis" MaxWidth="520" />
+				<Button Content="Open live map" Classes="small" IsVisible="{Binding HasMapUrl}"
+				        ToolTip.Tip="Open the live map of all boats in your browser" Command="{Binding OpenMapCommand}" />
+				<Button Content="Copy link" Classes="small" IsVisible="{Binding HasMapUrl}" Command="{Binding CopyMapLinkCommand}" />
+				<Button Content="Open replay" Classes="small" IsVisible="{Binding HasMapUrl}"
+				        ToolTip.Tip="Replay the race from its recorded GPS traces" Command="{Binding OpenReplayCommand}" />
+			</StackPanel>
+			<TextBlock Text="{Binding ConnectionStatusText}" Classes="warn" IsVisible="{Binding HasConnectionIssue}" />
+			<TextBlock Text="{Binding InfoMessage}" Classes="dim" />
+		</StackPanel>
+
+		<!-- Manual lap/finish-time entry: the offline-capable fallback to the server's GPS-based
+		     auto lap-counting, for when a competitor isn't tracking or the server is unreachable. -->
+		<!-- The editor only exists while a boat is selected (the template is not built for null). -->
+		<ContentControl Grid.Row="2" Content="{Binding SelectedEntry}"
+		                IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}">
+			<ContentControl.ContentTemplate>
+				<DataTemplate>
+					<Border Classes="card" Padding="10">
+						<StackPanel Spacing="8">
+							<TextBlock Text="{Binding ParticipantName}" Classes="bold" />
+							<TextBlock FontSize="12" Foreground="Gray">
+								<Run Text="{Binding LapsCompleted}" /><Run Text="/" /><Run Text="{Binding Laps}" /><Run Text=" laps completed" />
+							</TextBlock>
+
+							<Button Content="Record Lap Now" ToolTip.Tip="Stamps the current time as this boat's next lap"
+							        IsEnabled="{Binding CanRecordLap}" HorizontalAlignment="Left"
+							        Command="{Binding $parent[views:TimingSheetView].DataContext.RecordLapNowCommand}" CommandParameter="{Binding}" />
+							<TextBlock Text="All laps complete — this boat has finished" FontSize="12" Foreground="#2E7D32"
+							           IsVisible="{Binding IsFinished}" />
+
+							<TextBlock Text="Finish time" FontSize="12" Foreground="Gray" />
+							<StackPanel Classes="row">
+								<CalendarDatePicker SelectedDate="{Binding $parent[views:TimingSheetView].DataContext.EditFinishDate}" />
+								<TimePicker SelectedTime="{Binding $parent[views:TimingSheetView].DataContext.EditFinishTimeOfDay}" ClockIdentifier="24HourClock" />
+							</StackPanel>
+
+							<StackPanel Classes="row">
+								<Button Content="Set Finish Time" CommandParameter="{Binding}"
+								        Command="{Binding $parent[views:TimingSheetView].DataContext.SetFinishTimeCommand}" />
+								<Button Content="Close" Command="{Binding $parent[views:TimingSheetView].DataContext.ClearSelectionCommand}" />
+							</StackPanel>
+						</StackPanel>
+					</Border>
+				</DataTemplate>
+			</ContentControl.ContentTemplate>
+		</ContentControl>
+
+		<ListBox Grid.Row="3" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}" Background="Transparent">
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Border Classes="entry" Classes.finished="{Binding IsFinished}" Padding="8" BorderThickness="1" CornerRadius="6"
+					        ToolTip.Tip="Click to record a lap or set this boat's finish time manually">
+						<Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+							<StackPanel Grid.Column="0">
+								<TextBlock Text="{Binding ParticipantName}" Classes="bold" />
+								<TextBlock FontSize="12">
+									<Run Text="{Binding LapsCompleted}" /><Run Text="/" /><Run Text="{Binding Laps}" /><Run Text=" laps — " /><Run Text="{Binding Status}" />
+								</TextBlock>
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<TextBlock Text="{Binding JoinLinkText}" Classes="dim" VerticalAlignment="Center"
+									           TextTrimming="CharacterEllipsis" MaxWidth="440" ToolTip.Tip="{Binding JoinLinkText}" />
+									<Button Content="Copy link" Classes="small" IsVisible="{Binding HasJoinUrl}"
+									        ToolTip.Tip="Copy this boat's personal tracking link, to send to its skipper"
+									        Command="{Binding $parent[ListBox].DataContext.CopyJoinLinkCommand}" CommandParameter="{Binding}" />
+								</StackPanel>
+							</StackPanel>
+							<TextBlock Grid.Column="1" Text="FINAL LAP" Foreground="OrangeRed" FontWeight="Bold"
+							           VerticalAlignment="Center" IsVisible="{Binding IsOnFinalLap}" />
+							<Button Grid.Column="2" Content="DNF" ToolTip.Tip="Did Not Finish"
+							        Command="{Binding $parent[ListBox].DataContext.SetDnfCommand}" CommandParameter="{Binding}" />
+							<Button Grid.Column="3" Content="DNS" ToolTip.Tip="Did Not Start"
+							        Command="{Binding $parent[ListBox].DataContext.SetDnsCommand}" CommandParameter="{Binding}" />
+							<Button Grid.Column="4" Content="RET" ToolTip.Tip="Retired"
+							        Command="{Binding $parent[ListBox].DataContext.SetRetCommand}" CommandParameter="{Binding}" />
+							<Button Grid.Column="5" Content="OCS" ToolTip.Tip="On Course Side (premature start)"
+							        Command="{Binding $parent[ListBox].DataContext.SetOcsCommand}" CommandParameter="{Binding}" />
+						</Grid>
+					</Border>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+		</ListBox>
+
+		<StackPanel Grid.Row="4" Classes="row">
+			<Button Content="Shorten Course" Command="{Binding ShortenCourseCommand}" />
+			<Button Content="View Results" Command="{Binding ViewResultsCommand}" />
+		</StackPanel>
+	</Grid>
+</views:ScreenView>

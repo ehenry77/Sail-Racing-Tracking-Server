@@ -1,0 +1,114 @@
+<views:ScreenView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:SailRacing.Desktop.Views"
+             x:Class="SailRacing.Desktop.Views.RaceSetupView">
+
+	<ScrollViewer>
+		<StackPanel Margin="12" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
+
+			<Button Content="‹ Races" Command="{Binding BackToRacesCommand}" HorizontalAlignment="Left"
+			        ToolTip.Tip="Back to the race list" />
+
+			<TextBox Watermark="Race name" Text="{Binding RaceName}" />
+
+			<StackPanel Classes="row">
+				<TextBlock Text="Number of laps" VerticalAlignment="Center"
+				           ToolTip.Tip="Laps each boat sails by default (you can still change it per boat below)" />
+				<TextBox Watermark="Default laps" Text="{Binding LapsDefaultText}" Width="100" />
+			</StackPanel>
+
+			<ComboBox PlaceholderText="Fleet" ItemsSource="{Binding Fleets}" SelectedItem="{Binding SelectedFleet}" HorizontalAlignment="Stretch">
+				<ComboBox.ItemTemplate>
+					<DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+
+			<StackPanel Classes="row">
+				<CheckBox IsChecked="{Binding HasScheduledStartTime}" Content="Scheduled start time" />
+			</StackPanel>
+			<StackPanel Classes="row" IsVisible="{Binding HasScheduledStartTime}">
+				<CalendarDatePicker SelectedDate="{Binding ScheduledStartDate}" />
+				<TimePicker SelectedTime="{Binding ScheduledStartTimeOfDay}" ClockIdentifier="24HourClock" />
+			</StackPanel>
+
+			<TextBlock Text="Start line" Classes="bold" />
+			<Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+				<TextBox Grid.Column="0" Watermark="Committee lat" Text="{Binding CommitteeLatitudeText}" />
+				<TextBox Grid.Column="1" Watermark="Committee lon" Text="{Binding CommitteeLongitudeText}" />
+			</Grid>
+			<Button Content="Capture committee boat GPS" Command="{Binding CaptureCommitteeGpsCommand}" HorizontalAlignment="Left" />
+			<Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+				<TextBox Grid.Column="0" Watermark="Pin lat" Text="{Binding PinLatitudeText}" />
+				<TextBox Grid.Column="1" Watermark="Pin lon" Text="{Binding PinLongitudeText}" />
+			</Grid>
+			<Button Content="Capture pin GPS" Command="{Binding CapturePinGpsCommand}" HorizontalAlignment="Left" />
+
+			<CheckBox IsChecked="{Binding FinishSameAsStart}" Content="Finish is the same as the start line" />
+
+			<TextBlock Text="Course marks" Classes="bold" />
+			<ItemsControl ItemsSource="{Binding Buoys}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Border Classes="card" Padding="8" Margin="0,0,0,6" BorderBrush="LightGray">
+							<StackPanel Spacing="4">
+								<TextBox Watermark="Mark name" Text="{Binding Name}" />
+								<Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+									<TextBox Grid.Column="0" Watermark="Lat" Text="{Binding LatitudeText}" />
+									<TextBox Grid.Column="1" Watermark="Lon" Text="{Binding LongitudeText}" />
+								</Grid>
+								<StackPanel Classes="row">
+									<Button Content="Capture GPS"
+									        Command="{Binding $parent[ScrollViewer].DataContext.CaptureBuoyGpsCommand}" CommandParameter="{Binding}" />
+									<Button Content="Remove"
+									        Command="{Binding $parent[ScrollViewer].DataContext.RemoveBuoyCommand}" CommandParameter="{Binding}" />
+								</StackPanel>
+							</StackPanel>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+			<Button Content="+ Add mark" Command="{Binding AddBuoyCommand}" HorizontalAlignment="Left" />
+
+			<TextBlock Text="Live map" Classes="bold" />
+			<StackPanel Orientation="Horizontal" Spacing="6">
+				<TextBlock Text="{Binding MapLinkText}" Classes="dim" VerticalAlignment="Center"
+				           TextTrimming="CharacterEllipsis" MaxWidth="520" />
+				<Button Content="Open live map" Classes="small" IsVisible="{Binding HasMapUrl}"
+				        ToolTip.Tip="Open the live map of all boats in your browser" Command="{Binding OpenMapCommand}" />
+				<Button Content="Copy link" Classes="small" IsVisible="{Binding HasMapUrl}" Command="{Binding CopyMapLinkCommand}" />
+				<Button Content="Open replay" Classes="small" IsVisible="{Binding HasMapUrl}"
+				        ToolTip.Tip="Replay the race from its recorded GPS traces" Command="{Binding OpenReplayCommand}" />
+			</StackPanel>
+
+			<TextBlock Text="Boats — laps and join links" Classes="bold" />
+			<ItemsControl ItemsSource="{Binding RaceParticipants}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<StackPanel Margin="0,0,0,6" Spacing="2">
+							<StackPanel Classes="row">
+								<TextBlock Text="{Binding ParticipantName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Width="160" />
+								<TextBlock Text="Laps:" VerticalAlignment="Center" />
+								<TextBox Text="{Binding LapsText}" Width="70" />
+							</StackPanel>
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="{Binding JoinLinkText}" Classes="dim" VerticalAlignment="Center"
+								           TextTrimming="CharacterEllipsis" MaxWidth="520" ToolTip.Tip="{Binding JoinLinkText}" />
+								<Button Content="Copy link" Classes="small" IsVisible="{Binding HasJoinUrl}"
+								        ToolTip.Tip="Copy this boat's personal tracking link, to send to its skipper"
+								        Command="{Binding $parent[ScrollViewer].DataContext.CopyJoinLinkCommand}" CommandParameter="{Binding}" />
+							</StackPanel>
+						</StackPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+
+			<TextBlock Text="{Binding StatusMessage}" Foreground="Gray" TextWrapping="Wrap" />
+
+			<StackPanel Classes="row">
+				<Button Content="Save" Command="{Binding SaveCommand}" />
+				<Button Content="Save &amp; Start Sequence" Command="{Binding StartSequenceCommand}" IsVisible="{Binding IsSetupStage}" />
+			</StackPanel>
+
+		</StackPanel>
+	</ScrollViewer>
+</views:ScreenView>

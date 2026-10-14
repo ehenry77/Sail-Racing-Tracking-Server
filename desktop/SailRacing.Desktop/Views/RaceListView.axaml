@@ -1,0 +1,37 @@
+<views:ScreenView xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:SailRacing.Desktop.Views"
+             x:Class="SailRacing.Desktop.Views.RaceListView">
+
+	<Grid Margin="12">
+		<ScrollViewer>
+			<ItemsControl ItemsSource="{Binding Races}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Grid Margin="0,0,0,6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+							<StackPanel Grid.Column="0">
+								<TextBlock Text="{Binding Name}" Classes="bold" />
+								<TextBlock Text="{Binding Status}" FontSize="12" />
+								<TextBlock Text="{Binding ScheduledStartTime, StringFormat='Scheduled: {0:HH:mm}'}" Classes="dim"
+								           IsVisible="{Binding ScheduledStartTime, Converter={x:Static ObjectConverters.IsNotNull}}" />
+							</StackPanel>
+							<Button Grid.Column="1" Content="Edit"
+							        Command="{Binding $parent[ItemsControl].DataContext.EditCommand}" CommandParameter="{Binding}" />
+							<Button Grid.Column="2" Content="Open"
+							        Command="{Binding $parent[ItemsControl].DataContext.OpenCommand}" CommandParameter="{Binding}" />
+						</Grid>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</ScrollViewer>
+
+		<StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right" Spacing="6" Margin="0,0,0,12">
+			<TextBlock Text="{Binding StatusMessage}" Classes="dim" HorizontalAlignment="Right" />
+			<StackPanel Classes="row" HorizontalAlignment="Right">
+				<Button Content="Take over a race…" Command="{Binding TakeOverCommand}"
+				        ToolTip.Tip="Continue a race started on another committee PC: pulls it from the server by its join code" />
+				<Button Content="+ New Race" Command="{Binding NewRaceCommand}" />
+			</StackPanel>
+		</StackPanel>
+	</Grid>
+</views:ScreenView>
