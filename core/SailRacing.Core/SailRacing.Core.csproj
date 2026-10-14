@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Everything the committee app needs that is not user interface: models, local database, server
+	     client, sync, take-over, start-sequence logic and the view models. No MAUI (or any UI toolkit)
+	     reference, so the same code runs in the MAUI app and in the Avalonia desktop app (Linux, Windows, macOS).
+	     What the platforms do differently (navigation, dialogs, clipboard, files, speech, location, settings,
+	     timers) sits behind the interfaces in Platform/PlatformServices.cs. -->
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<RootNamespace>SailRacing</RootNamespace>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
+		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+	</ItemGroup>
+
+</Project>

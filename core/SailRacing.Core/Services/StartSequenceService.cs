@@ -18,7 +18,8 @@ public class StartSequenceService : IStartSequenceService, IDisposable
     private readonly SemaphoreSlim _speechLock = new(1, 1);
     private readonly ISpeechService _speech;
 
-    private IDispatcherTimer? _timer;
+    private readonly IUiDispatcher _dispatcher;
+    private IUiTimer? _timer;
     private DateTimeOffset _startAt;
     private int _cursor;
     private bool _classFlagUp;
@@ -29,9 +30,10 @@ public class StartSequenceService : IStartSequenceService, IDisposable
 
     private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(100);
 
-    public StartSequenceService(ISpeechService speech)
+    public StartSequenceService(ISpeechService speech, IUiDispatcher dispatcher)
     {
         _speech = speech;
+        _dispatcher = dispatcher;
     }
 
     public bool IsRunning { get; private set; }
@@ -71,7 +73,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
 
         IsRunning = true;
 
-        _timer = Application.Current!.Dispatcher.CreateTimer();
+        _timer = _dispatcher.CreateTimer();
         _timer.Interval = TickInterval;
         _timer.Tick += OnTick;
         _timer.Start();

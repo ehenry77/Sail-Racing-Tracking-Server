@@ -7,8 +7,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-[QueryProperty(nameof(RaceId), "raceId")]
-public partial class StartSequenceViewModel : BaseViewModel, IDisposable
+public partial class StartSequenceViewModel : BaseViewModel, IHasRaceId, IDisposable
 {
     private readonly IRaceRepository _races;
     private readonly IParticipantRepository _participants;
@@ -18,7 +17,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     private readonly JoinCodeWatcher _joinWatcher;
 
     private Race? _race;
-    private IDispatcherTimer? _preStartTimer;
+    private IUiTimer? _preStartTimer;
 
     public string? RaceId { get; set; }
 
@@ -77,14 +76,15 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         IParticipantRepository participants,
         IStartSequenceService sequence,
         ISailRacingApiClient api,
-        IRaceSyncService sync)
+        IRaceSyncService sync,
+        IUiServices ui) : base(ui)
     {
         _races = races;
         _participants = participants;
         _sequence = sequence;
         _api = api;
         _sync = sync;
-        _joinWatcher = new JoinCodeWatcher(races);
+        _joinWatcher = new JoinCodeWatcher(races, ui.Dispatcher);
         Title = "Start Sequence";
     }
 
@@ -164,7 +164,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     {
         if (MapUrl is not null)
         {
-            await Launcher.Default.OpenAsync(new Uri(MapUrl));
+            await Ui.Launcher.OpenAsync(new Uri(MapUrl));
         }
     }
 
@@ -176,7 +176,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        await Clipboard.Default.SetTextAsync(MapUrl);
+        await Ui.Clipboard.SetTextAsync(MapUrl);
         LinkMessage = "Copied the live map link.";
     }
 
@@ -189,7 +189,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        await Clipboard.Default.SetTextAsync(item.JoinUrl);
+        await Ui.Clipboard.SetTextAsync(item.JoinUrl);
         LinkMessage = $"Copied the join link for {item.ParticipantName}.";
     }
 
@@ -197,7 +197,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     {
         StopPreStartTimer();
 
-        _preStartTimer = Application.Current!.Dispatcher.CreateTimer();
+        _preStartTimer = Ui.Dispatcher.CreateTimer();
         _preStartTimer.Interval = TimeSpan.FromSeconds(1);
         _preStartTimer.Tick += (_, _) => UpdatePreStartDisplay();
         _preStartTimer.Start();
@@ -299,7 +299,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
         // of server reachability — waiting here would block navigation for up to the HTTP timeout.
         _ = SafeCallAsync(() => _api.AllClearAsync(raceId));
 
-        await Shell.Current.GoToAsync($"timingSheet?raceId={raceId}");
+        await Ui.Navigator.GoToAsync($"timingSheet?raceId={raceId}");
     }
 
     /// <summary>
@@ -315,7 +315,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        var confirmed = await Shell.Current.DisplayAlert(
+        var confirmed = await Ui.Dialogs.ConfirmAsync(
             "Cancel the start sequence?",
             "The countdown stops, the flags come down and the race goes back to before the start. " +
             "Positions recorded during this sequence are discarded. You can begin a new sequence afterwards.",
@@ -362,7 +362,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
 
     private void OnStatusChanged(object? sender, StartSequenceStatus status)
     {
-        MainThread.BeginInvokeOnMainThread(() =>
+        Ui.Dispatcher.Post(() =>
         {
             ClassFlagUp = status.ClassFlagUp;
             PFlagUp = status.PFlagUp;
@@ -386,7 +386,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
     {
         if (!string.IsNullOrEmpty(RaceId))
         {
-            await Shell.Current.GoToAsync($"raceSetup?raceId={RaceId}");
+            await Ui.Navigator.GoToAsync($"raceSetup?raceId={RaceId}");
         }
     }
 

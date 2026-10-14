@@ -17,7 +17,7 @@ public class WindowsSpeechService : ISpeechService
     private readonly SpeechSynthesizer _synth = new();
     private readonly ConcurrentDictionary<string, MediaPlayer> _prepared = new();
     private readonly SemaphoreSlim _prepareLock = new(1, 1);
-    private readonly DefaultSpeechService _fallback = new();
+    private readonly SailRacing.Platform.MauiTextSpeechService _fallback = new();
 
     public async Task PrepareAsync(IEnumerable<string> phrases)
     {

@@ -7,8 +7,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-[QueryProperty(nameof(RaceId), "raceId")]
-public partial class RaceSetupViewModel : BaseViewModel
+public partial class RaceSetupViewModel : BaseViewModel, IHasRaceId
 {
     private readonly IRaceRepository _races;
     private readonly IFleetRepository _fleets;
@@ -93,7 +92,8 @@ public partial class RaceSetupViewModel : BaseViewModel
         IRaceRepository races,
         IFleetRepository fleets,
         IParticipantRepository participants,
-        IRaceSyncService sync)
+        IRaceSyncService sync,
+        IUiServices ui) : base(ui)
     {
         _races = races;
         _fleets = fleets;
@@ -265,14 +265,19 @@ public partial class RaceSetupViewModel : BaseViewModel
         buoy.CapturedViaGps = true;
     }
 
-    private async Task<Location?> CaptureGpsAsync()
+    private async Task<GeoFix?> CaptureGpsAsync()
     {
+        if (!Ui.Geolocation.IsAvailable)
+        {
+            StatusMessage = "This computer has no location source — type the coordinates in instead.";
+            return null;
+        }
+
         try
         {
             StatusMessage = "Getting location...";
-            var location = await Geolocation.Default.GetLocationAsync(
-                new GeolocationRequest(GeolocationAccuracy.Best, TimeSpan.FromSeconds(10)));
-            StatusMessage = string.Empty;
+            var location = await Ui.Geolocation.GetLocationAsync(TimeSpan.FromSeconds(10));
+            StatusMessage = location is null ? "No GPS fix yet — try again in a moment." : string.Empty;
             return location;
         }
         catch (Exception ex)
@@ -378,7 +383,7 @@ public partial class RaceSetupViewModel : BaseViewModel
             // Non-fatal: the race is saved locally and the connectivity watcher retries the push.
         }
 
-        MainThread.BeginInvokeOnMainThread(() =>
+        Ui.Dispatcher.Post(() =>
         {
             if (RaceId != raceId)
             {
@@ -405,7 +410,7 @@ public partial class RaceSetupViewModel : BaseViewModel
     {
         if (MapUrl is not null)
         {
-            await Launcher.Default.OpenAsync(new Uri(MapUrl));
+            await Ui.Launcher.OpenAsync(new Uri(MapUrl));
         }
     }
 
@@ -414,7 +419,7 @@ public partial class RaceSetupViewModel : BaseViewModel
     {
         if (ReplayUrl is not null)
         {
-            await Launcher.Default.OpenAsync(new Uri(ReplayUrl));
+            await Ui.Launcher.OpenAsync(new Uri(ReplayUrl));
         }
     }
 
@@ -426,7 +431,7 @@ public partial class RaceSetupViewModel : BaseViewModel
             return;
         }
 
-        await Clipboard.Default.SetTextAsync(MapUrl);
+        await Ui.Clipboard.SetTextAsync(MapUrl);
         StatusMessage = "Copied the live map link.";
     }
 
@@ -449,7 +454,7 @@ public partial class RaceSetupViewModel : BaseViewModel
             return;
         }
 
-        await Clipboard.Default.SetTextAsync(item.JoinUrl);
+        await Ui.Clipboard.SetTextAsync(item.JoinUrl);
         StatusMessage = $"Copied the join link for {item.ParticipantName}.";
     }
 
@@ -457,7 +462,7 @@ public partial class RaceSetupViewModel : BaseViewModel
     private async Task StartSequenceAsync()
     {
         await SaveAsync();
-        await Shell.Current.GoToAsync($"startSequence?raceId={_race.Id}");
+        await Ui.Navigator.GoToAsync($"startSequence?raceId={_race.Id}");
     }
 
     private static double? ParseOrNull(string text) => double.TryParse(text, out var value) ? value : null;

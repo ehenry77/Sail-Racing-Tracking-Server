@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:SailRacing.ViewModels"
-             xmlns:devices="clr-namespace:SailRacing.Services.Devices"
+             xmlns:vm="clr-namespace:SailRacing.ViewModels;assembly=SailRacing.Core"
+             xmlns:devices="clr-namespace:SailRacing.Services.Devices;assembly=SailRacing.Core"
              x:Class="SailRacing.Views.Settings.SettingsPage"
              x:DataType="vm:SettingsViewModel"
              Title="{Binding Title}">

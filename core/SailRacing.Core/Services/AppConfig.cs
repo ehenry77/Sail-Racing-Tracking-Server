@@ -6,6 +6,12 @@ namespace SailRacing.Services;
 /// </summary>
 public static class AppConfig
 {
+    /// <summary>
+    /// Where settings live. Each app installs its own at start-up (MAUI Preferences, or a JSON file on the
+    /// desktop); until then they are kept in memory, which is also what tests get.
+    /// </summary>
+    public static ISettingsStore Store { get; set; } = new InMemorySettingsStore();
+
     private const string ServerBaseUrlKey = "ServerBaseUrl";
     private const string DefaultServerBaseUrl = "https://sail-racing.example.com";
 
@@ -20,37 +26,37 @@ public static class AppConfig
 
     public static string ServerBaseUrl
     {
-        get => Preferences.Default.Get(ServerBaseUrlKey, DefaultServerBaseUrl);
-        set => Preferences.Default.Set(ServerBaseUrlKey, value);
+        get => (Store.Get(ServerBaseUrlKey) ?? DefaultServerBaseUrl);
+        set => Store.Set(ServerBaseUrlKey, value);
     }
 
     public static (string? Id, string? Name) PreferredAudioOutputDevice
     {
-        get => (Preferences.Default.Get<string?>(AudioOutputDeviceIdKey, null), Preferences.Default.Get<string?>(AudioOutputDeviceNameKey, null));
+        get => (Store.Get(AudioOutputDeviceIdKey), Store.Get(AudioOutputDeviceNameKey));
         set
         {
-            Preferences.Default.Set(AudioOutputDeviceIdKey, value.Id);
-            Preferences.Default.Set(AudioOutputDeviceNameKey, value.Name);
+            Store.Set(AudioOutputDeviceIdKey, value.Id);
+            Store.Set(AudioOutputDeviceNameKey, value.Name);
         }
     }
 
     public static (string? Id, string? Name) PreferredAudioInputDevice
     {
-        get => (Preferences.Default.Get<string?>(AudioInputDeviceIdKey, null), Preferences.Default.Get<string?>(AudioInputDeviceNameKey, null));
+        get => (Store.Get(AudioInputDeviceIdKey), Store.Get(AudioInputDeviceNameKey));
         set
         {
-            Preferences.Default.Set(AudioInputDeviceIdKey, value.Id);
-            Preferences.Default.Set(AudioInputDeviceNameKey, value.Name);
+            Store.Set(AudioInputDeviceIdKey, value.Id);
+            Store.Set(AudioInputDeviceNameKey, value.Name);
         }
     }
 
     public static (string? Id, string? Name) PreferredVideoInputDevice
     {
-        get => (Preferences.Default.Get<string?>(VideoInputDeviceIdKey, null), Preferences.Default.Get<string?>(VideoInputDeviceNameKey, null));
+        get => (Store.Get(VideoInputDeviceIdKey), Store.Get(VideoInputDeviceNameKey));
         set
         {
-            Preferences.Default.Set(VideoInputDeviceIdKey, value.Id);
-            Preferences.Default.Set(VideoInputDeviceNameKey, value.Name);
+            Store.Set(VideoInputDeviceIdKey, value.Id);
+            Store.Set(VideoInputDeviceNameKey, value.Name);
         }
     }
 
@@ -61,20 +67,20 @@ public static class AppConfig
 
     public static string SequenceAlarmsText
     {
-        get => Preferences.Default.Get(SequenceAlarmsKey, StartSequenceSettings.DefaultAlarmsText);
-        set => Preferences.Default.Set(SequenceAlarmsKey, value);
+        get => (Store.Get(SequenceAlarmsKey) ?? StartSequenceSettings.DefaultAlarmsText);
+        set => Store.Set(SequenceAlarmsKey, value);
     }
 
     public static string SequenceCountdownText
     {
-        get => Preferences.Default.Get(SequenceCountdownKey, StartSequenceSettings.DefaultCountdownText);
-        set => Preferences.Default.Set(SequenceCountdownKey, value);
+        get => (Store.Get(SequenceCountdownKey) ?? StartSequenceSettings.DefaultCountdownText);
+        set => Store.Set(SequenceCountdownKey, value);
     }
 
     public static string SequenceSignalsText
     {
-        get => Preferences.Default.Get(SequenceSignalsKey, StartSequenceSettings.DefaultSignalsText);
-        set => Preferences.Default.Set(SequenceSignalsKey, value);
+        get => (Store.Get(SequenceSignalsKey) ?? StartSequenceSettings.DefaultSignalsText);
+        set => Store.Set(SequenceSignalsKey, value);
     }
 
     /// <summary>The sequence to run now. Stored values are validated when saved, but if they ever don't parse
@@ -86,11 +92,11 @@ public static class AppConfig
 
     public static (string? Id, string? Name) PreferredGpsSensor
     {
-        get => (Preferences.Default.Get<string?>(GpsSensorDeviceIdKey, null), Preferences.Default.Get<string?>(GpsSensorDeviceNameKey, null));
+        get => (Store.Get(GpsSensorDeviceIdKey), Store.Get(GpsSensorDeviceNameKey));
         set
         {
-            Preferences.Default.Set(GpsSensorDeviceIdKey, value.Id);
-            Preferences.Default.Set(GpsSensorDeviceNameKey, value.Name);
+            Store.Set(GpsSensorDeviceIdKey, value.Id);
+            Store.Set(GpsSensorDeviceNameKey, value.Name);
         }
     }
 }

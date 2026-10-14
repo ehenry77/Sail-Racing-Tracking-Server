@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SailRacing.Data;
+using SailRacing.Platform;
 using SailRacing.Services;
 using SailRacing.Services.Devices;
 using SailRacing.ViewModels;
@@ -27,42 +28,29 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // Data
-        builder.Services.AddSingleton<ISailRacingDatabase, SailRacingDatabase>();
-        builder.Services.AddSingleton<IParticipantRepository, ParticipantRepository>();
-        builder.Services.AddSingleton<IFleetRepository, FleetRepository>();
-        builder.Services.AddSingleton<IRaceRepository, RaceRepository>();
-        builder.Services.AddSingleton<IResultPublicationRepository, ResultPublicationRepository>();
+        // Platform services: how the shared core reaches MAUI's navigation, dialogs, files, location, settings...
+        AppConfig.Store = new MauiSettingsStore();
+        builder.Services.AddSingleton<INavigator, MauiNavigator>();
+        builder.Services.AddSingleton<IDialogService, MauiDialogService>();
+        builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
+        builder.Services.AddSingleton<ILauncherService, MauiLauncherService>();
+        builder.Services.AddSingleton<IFileService, MauiFileService>();
+        builder.Services.AddSingleton<IGeolocationService, MauiGeolocationService>();
+        builder.Services.AddSingleton<IUiDispatcher, MauiUiDispatcher>();
+        builder.Services.AddSingleton<IAppPaths, MauiAppPaths>();
+        builder.Services.AddSingleton<IConnectivityService, MauiConnectivityService>();
 
-        // Services
-        // Every screen (Race Setup, Start Sequence, Timing Sheet, Results) must stay fully usable off
-        // local data when the server is unreachable — a short timeout means a down/unresponsive server
-        // fails fast instead of leaving the UI hanging for HttpClient's 100-second default.
-        builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(8) });
-        builder.Services.AddSingleton<ISailRacingApiClient, SailRacingApiClient>();
-        builder.Services.AddSingleton<TimingOutbox>();
-        builder.Services.AddSingleton<IRaceSyncService, RaceSyncService>();
-        builder.Services.AddSingleton<IRaceTakeOverService, RaceTakeOverService>();
-        // Singleton: one start sequence runs at a time, and it must survive leaving/re-entering the page.
-        // Transient would let a re-entered page start a second timer while the first keeps announcing.
+        // Everything shared with the desktop app: database, repositories, server client, sync, take-over,
+        // start sequence and the view models.
+        builder.Services.AddSailRacingCore();
+
+        // Per-platform pieces the core needs.
 #if WINDOWS
         builder.Services.AddSingleton<ISpeechService, WindowsSpeechService>();
 #else
-        builder.Services.AddSingleton<ISpeechService, DefaultSpeechService>();
+        builder.Services.AddSingleton<ISpeechService, MauiTextSpeechService>();
 #endif
-        builder.Services.AddSingleton<IStartSequenceService, StartSequenceService>();
-        builder.Services.AddTransient<IRaceSocketClient, RaceSocketClient>();
         builder.Services.AddSingleton<IDeviceSettingsService, DeviceSettingsService>();
-
-        // ViewModels
-        builder.Services.AddTransient<CompetitorsViewModel>();
-        builder.Services.AddTransient<FleetsViewModel>();
-        builder.Services.AddTransient<RaceListViewModel>();
-        builder.Services.AddTransient<RaceSetupViewModel>();
-        builder.Services.AddTransient<StartSequenceViewModel>();
-        builder.Services.AddTransient<TimingSheetViewModel>();
-        builder.Services.AddTransient<ResultsViewModel>();
-        builder.Services.AddTransient<SettingsViewModel>();
 
         // Views
         builder.Services.AddTransient<CompetitorsPage>();

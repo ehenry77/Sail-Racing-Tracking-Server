@@ -83,7 +83,7 @@ public partial class SettingsViewModel : BaseViewModel
         SequenceSignalsText = StartSequenceSettings.DefaultSignalsText;
     }
 
-    public SettingsViewModel(IDeviceSettingsService devices)
+    public SettingsViewModel(IDeviceSettingsService devices, IUiServices ui) : base(ui)
     {
         _devices = devices;
         Title = "Settings";

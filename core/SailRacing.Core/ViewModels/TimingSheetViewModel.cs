@@ -8,8 +8,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-[QueryProperty(nameof(RaceId), "raceId")]
-public partial class TimingSheetViewModel : BaseViewModel, IDisposable
+public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposable
 {
     private readonly IRaceRepository _races;
     private readonly IFleetRepository _fleets;
@@ -77,7 +76,8 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         IParticipantRepository participants,
         IRaceSocketClient socket,
         ISailRacingApiClient api,
-        IRaceSyncService sync)
+        IRaceSyncService sync,
+        IUiServices ui) : base(ui)
     {
         _sync = sync;
         _races = races;
@@ -85,7 +85,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         _participants = participants;
         _socket = socket;
         _api = api;
-        _joinWatcher = new JoinCodeWatcher(races);
+        _joinWatcher = new JoinCodeWatcher(races, ui.Dispatcher);
         Title = "Timing Sheet";
     }
 
@@ -228,7 +228,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
 
     private void OnMessageReceived(object? sender, RaceSocketMessage message)
     {
-        MainThread.BeginInvokeOnMainThread(async () =>
+        Ui.Dispatcher.Post(async () =>
         {
             if (message.Raw.TryGetProperty("participantId", out var pid) && pid.ValueKind == JsonValueKind.String
                 && _manualAt.TryGetValue(pid.GetString()!, out var editedAt) && DateTime.UtcNow - editedAt < EchoWindow)
@@ -573,7 +573,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
 
         _race.Status = RaceStatus.Finished;
         await PersistAsync();
-        await Shell.Current.GoToAsync($"results?raceId={_race.Id}");
+        await Ui.Navigator.GoToAsync($"results?raceId={_race.Id}");
     }
 
     private async Task PersistAsync()
@@ -616,7 +616,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     {
         if (MapUrl is not null)
         {
-            await Launcher.Default.OpenAsync(new Uri(MapUrl));
+            await Ui.Launcher.OpenAsync(new Uri(MapUrl));
         }
     }
 
@@ -625,7 +625,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     {
         if (ReplayUrl is not null)
         {
-            await Launcher.Default.OpenAsync(new Uri(ReplayUrl));
+            await Ui.Launcher.OpenAsync(new Uri(ReplayUrl));
         }
     }
 
@@ -637,7 +637,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        await Clipboard.Default.SetTextAsync(MapUrl);
+        await Ui.Clipboard.SetTextAsync(MapUrl);
         InfoMessage = "Copied the live map link.";
     }
 
@@ -650,7 +650,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        await Clipboard.Default.SetTextAsync(entry.JoinUrl);
+        await Ui.Clipboard.SetTextAsync(entry.JoinUrl);
         InfoMessage = $"Copied the join link for {entry.ParticipantName}.";
     }
 
@@ -659,7 +659,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     {
         if (!string.IsNullOrEmpty(RaceId))
         {
-            await Shell.Current.GoToAsync($"raceSetup?raceId={RaceId}");
+            await Ui.Navigator.GoToAsync($"raceSetup?raceId={RaceId}");
         }
     }
 

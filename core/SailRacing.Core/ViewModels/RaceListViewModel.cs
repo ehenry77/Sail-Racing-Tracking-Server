@@ -17,7 +17,7 @@ public partial class RaceListViewModel : BaseViewModel
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
-    public RaceListViewModel(IRaceRepository races, IRaceTakeOverService takeOver)
+    public RaceListViewModel(IRaceRepository races, IRaceTakeOverService takeOver, IUiServices ui) : base(ui)
     {
         _races = races;
         _takeOver = takeOver;
@@ -51,7 +51,7 @@ public partial class RaceListViewModel : BaseViewModel
     [RelayCommand]
     private async Task NewRaceAsync()
     {
-        await Shell.Current.GoToAsync("raceSetup");
+        await Ui.Navigator.GoToAsync("raceSetup");
     }
 
     /// <summary>
@@ -66,13 +66,13 @@ public partial class RaceListViewModel : BaseViewModel
             return;
         }
 
-        var entered = await Shell.Current.DisplayPromptAsync(
+        var entered = await Ui.Dialogs.PromptAsync(
             "Take over a race",
             "Enter the race's join code, or paste one of its links. This PC then carries on from the race as the server holds it " +
             "— lap counts, finishes and the start time included.",
-            accept: "Take over",
-            cancel: "Cancel",
-            placeholder: "e.g. K7P2M");
+            "Take over",
+            "Cancel",
+            "e.g. K7P2M");
         if (string.IsNullOrWhiteSpace(entered))
         {
             return;
@@ -116,13 +116,13 @@ public partial class RaceListViewModel : BaseViewModel
             _ => "raceSetup"
         };
 
-        await Shell.Current.GoToAsync($"{route}?raceId={race.Id}");
+        await Ui.Navigator.GoToAsync($"{route}?raceId={race.Id}");
     }
 
     // Open routes by status (a running race goes to its timing sheet), so editing needs its own entry point.
     [RelayCommand]
     private async Task EditAsync(Race race)
     {
-        await Shell.Current.GoToAsync($"raceSetup?raceId={race.Id}");
+        await Ui.Navigator.GoToAsync($"raceSetup?raceId={race.Id}");
     }
 }

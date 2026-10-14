@@ -8,8 +8,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-[QueryProperty(nameof(RaceId), "raceId")]
-public partial class ResultsViewModel : BaseViewModel
+public partial class ResultsViewModel : BaseViewModel, IHasRaceId
 {
     private readonly IRaceRepository _races;
     private readonly IParticipantRepository _participants;
@@ -41,7 +40,7 @@ public partial class ResultsViewModel : BaseViewModel
     {
         if (ReplayUrl is not null)
         {
-            await Launcher.Default.OpenAsync(new Uri(ReplayUrl));
+            await Ui.Launcher.OpenAsync(new Uri(ReplayUrl));
         }
     }
 
@@ -53,7 +52,7 @@ public partial class ResultsViewModel : BaseViewModel
             return;
         }
 
-        await Clipboard.Default.SetTextAsync(ReplayUrl);
+        await Ui.Clipboard.SetTextAsync(ReplayUrl);
         StatusMessage = "Copied the replay link.";
     }
 
@@ -61,7 +60,8 @@ public partial class ResultsViewModel : BaseViewModel
         IRaceRepository races,
         IParticipantRepository participants,
         ISailRacingApiClient api,
-        IResultPublicationRepository publications)
+        IResultPublicationRepository publications,
+        IUiServices ui) : base(ui)
     {
         _races = races;
         _participants = participants;
@@ -75,7 +75,7 @@ public partial class ResultsViewModel : BaseViewModel
     {
         if (!string.IsNullOrEmpty(RaceId))
         {
-            await Shell.Current.GoToAsync($"raceSetup?raceId={RaceId}");
+            await Ui.Navigator.GoToAsync($"raceSetup?raceId={RaceId}");
         }
     }
 
@@ -180,8 +180,7 @@ public partial class ResultsViewModel : BaseViewModel
 
             var safeName = string.Concat((string.IsNullOrWhiteSpace(_race.Name) ? "race" : _race.Name.Trim())
                 .Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Sail-Racing results");
+            var folder = Path.Combine(Ui.Files.DocumentsDirectory, "Sail-Racing results");
             Directory.CreateDirectory(folder);
             var filePath = Path.Combine(folder, $"{safeName} - results.csv");
 
@@ -191,11 +190,7 @@ public partial class ResultsViewModel : BaseViewModel
 
             try
             {
-                await Share.Default.RequestAsync(new ShareFileRequest
-                {
-                    Title = "Export results",
-                    File = new ShareFile(filePath)
-                });
+                await Ui.Files.ShareFileAsync("Export results", filePath);
             }
             catch
             {

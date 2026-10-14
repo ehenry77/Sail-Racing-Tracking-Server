@@ -1,4 +1,5 @@
 using SailRacing.Models;
+using SailRacing.Services;
 using SQLite;
 
 namespace SailRacing.Data;
@@ -10,9 +11,10 @@ public class SailRacingDatabase : ISailRacingDatabase
 
     public SQLiteAsyncConnection Connection { get; }
 
-    public SailRacingDatabase()
+    public SailRacingDatabase(IAppPaths paths)
     {
-        var dbPath = Path.Combine(FileSystem.AppDataDirectory, "sailracing.db3");
+        Directory.CreateDirectory(paths.DataDirectory);
+        var dbPath = Path.Combine(paths.DataDirectory, "sailracing.db3");
         Connection = new SQLiteAsyncConnection(dbPath);
     }
 

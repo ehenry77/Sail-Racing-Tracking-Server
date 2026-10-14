@@ -12,12 +12,14 @@ namespace SailRacing.Services;
 public sealed class JoinCodeWatcher
 {
     private readonly IRaceRepository _races;
-    private IDispatcherTimer? _timer;
+    private readonly IUiDispatcher _dispatcher;
+    private IUiTimer? _timer;
     private bool _checking;
 
-    public JoinCodeWatcher(IRaceRepository races)
+    public JoinCodeWatcher(IRaceRepository races, IUiDispatcher dispatcher)
     {
         _races = races;
+        _dispatcher = dispatcher;
     }
 
     /// <summary>Calls <paramref name="onJoinCode"/> on the UI thread once, then stops.</summary>
@@ -25,7 +27,7 @@ public sealed class JoinCodeWatcher
     {
         Stop();
 
-        var timer = Application.Current!.Dispatcher.CreateTimer();
+        var timer = _dispatcher.CreateTimer();
         timer.Interval = TimeSpan.FromSeconds(3);
         timer.Tick += async (_, _) =>
         {

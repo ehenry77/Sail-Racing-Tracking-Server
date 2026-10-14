@@ -14,6 +14,7 @@ public class RaceSyncService : IRaceSyncService
     private readonly IParticipantRepository _participants;
     private readonly ISailRacingApiClient _api;
     private readonly TimingOutbox _timing;
+    private readonly IConnectivityService _connectivity;
     private readonly SemaphoreSlim _flushLock = new(1, 1);
     private bool _watcherStarted;
 
@@ -22,9 +23,11 @@ public class RaceSyncService : IRaceSyncService
         IFleetRepository fleets,
         IParticipantRepository participants,
         ISailRacingApiClient api,
-        TimingOutbox timing)
+        TimingOutbox timing,
+        IConnectivityService connectivity)
     {
         _timing = timing;
+        _connectivity = connectivity;
         _races = races;
         _fleets = fleets;
         _participants = participants;
@@ -159,9 +162,9 @@ public class RaceSyncService : IRaceSyncService
         }
 
         _watcherStarted = true;
-        Connectivity.Current.ConnectivityChanged += async (_, e) =>
+        _connectivity.ConnectivityChanged += async (_, online) =>
         {
-            if (e.NetworkAccess == NetworkAccess.Internet)
+            if (online)
             {
                 await RetryPendingAsync();
             }

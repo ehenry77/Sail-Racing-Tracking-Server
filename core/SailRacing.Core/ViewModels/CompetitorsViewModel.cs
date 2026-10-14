@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SailRacing.Data;
 using SailRacing.Models;
+using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
@@ -29,7 +30,7 @@ public partial class CompetitorsViewModel : BaseViewModel
 
     private string? _editId;
 
-    public CompetitorsViewModel(IParticipantRepository participants)
+    public CompetitorsViewModel(IParticipantRepository participants, IUiServices ui) : base(ui)
     {
         _participants = participants;
         Title = "Competitors";

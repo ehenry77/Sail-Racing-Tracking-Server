@@ -3,6 +3,7 @@ using SailRacing.ViewModels;
 
 namespace SailRacing.Views.Race;
 
+[QueryProperty(nameof(RaceId), "raceId")]
 public partial class StartSequencePage : ContentPage
 {
     // Must match the flag stage Grid's RowDefinitions in the XAML (row1 + row2 heights): the distance
@@ -11,6 +12,13 @@ public partial class StartSequencePage : ContentPage
     private const double FlagTravelDistance = 200;
 
     private readonly StartSequenceViewModel _viewModel;
+
+    /// <summary>Set by Shell from the "raceId" query value before the page appears.</summary>
+    public string? RaceId
+    {
+        get => _viewModel.RaceId;
+        set => _viewModel.RaceId = value;
+    }
 
     public StartSequencePage(StartSequenceViewModel viewModel)
     {

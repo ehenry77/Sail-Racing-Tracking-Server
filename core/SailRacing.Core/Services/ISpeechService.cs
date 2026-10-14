@@ -13,12 +13,3 @@ public interface ISpeechService
     /// <summary>Speaks the phrase and completes when it has been spoken (or <paramref name="token"/> cancels it).</summary>
     Task SpeakAsync(string text, CancellationToken token);
 }
-
-/// <summary>The platform's own text-to-speech, used wherever there is no faster dedicated implementation.</summary>
-public class DefaultSpeechService : ISpeechService
-{
-    public Task PrepareAsync(IEnumerable<string> phrases) => Task.CompletedTask;
-
-    public Task SpeakAsync(string text, CancellationToken token) =>
-        TextToSpeech.Default.SpeakAsync(text, cancelToken: token);
-}

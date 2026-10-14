@@ -12,15 +12,6 @@ public partial class FleetsViewModel : BaseViewModel
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    private static readonly FilePickerFileType JsonFileType = new(new Dictionary<DevicePlatform, IEnumerable<string>>
-    {
-        { DevicePlatform.iOS, new[] { "public.json" } },
-        { DevicePlatform.Android, new[] { "application/json" } },
-        { DevicePlatform.WinUI, new[] { ".json" } },
-        { DevicePlatform.macOS, new[] { "json" } },
-        { DevicePlatform.MacCatalyst, new[] { "public.json" } }
-    });
-
     private readonly IFleetRepository _fleets;
     private readonly IParticipantRepository _participants;
 
@@ -39,7 +30,7 @@ public partial class FleetsViewModel : BaseViewModel
 
     private string? _editId;
 
-    public FleetsViewModel(IFleetRepository fleets, IParticipantRepository participants)
+    public FleetsViewModel(IFleetRepository fleets, IParticipantRepository participants, IUiServices ui) : base(ui)
     {
         _fleets = fleets;
         _participants = participants;
@@ -154,14 +145,10 @@ public partial class FleetsViewModel : BaseViewModel
             }
 
             var json = JsonSerializer.Serialize(export, JsonOptions);
-            var filePath = Path.Combine(FileSystem.CacheDirectory, "sail-racing-fleets-export.json");
+            var filePath = Path.Combine(Ui.Files.CacheDirectory, "sail-racing-fleets-export.json");
             await File.WriteAllTextAsync(filePath, json);
 
-            await Share.Default.RequestAsync(new ShareFileRequest
-            {
-                Title = "Export Fleets",
-                File = new ShareFile(filePath)
-            });
+            await Ui.Files.ShareFileAsync("Export Fleets", filePath);
 
             StatusMessage = $"Exported {export.Count} fleet(s).";
         }
@@ -176,18 +163,13 @@ public partial class FleetsViewModel : BaseViewModel
     {
         try
         {
-            var result = await FilePicker.Default.PickAsync(new PickOptions
-            {
-                PickerTitle = "Import fleets",
-                FileTypes = JsonFileType
-            });
-
-            if (result is null)
+            var picked = await Ui.Files.PickTextFileAsync("Import fleets", ".json");
+            if (picked is null)
             {
                 return;
             }
 
-            var json = await File.ReadAllTextAsync(result.FullPath);
+            var json = picked.Text;
             var imported = JsonSerializer.Deserialize<List<FleetExportDto>>(json, JsonOptions);
             if (imported is null || imported.Count == 0)
             {
