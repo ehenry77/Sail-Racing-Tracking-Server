@@ -43,6 +43,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<IRaceSyncService, RaceSyncService>();
         // Singleton: one start sequence runs at a time, and it must survive leaving/re-entering the page.
         // Transient would let a re-entered page start a second timer while the first keeps announcing.
+#if WINDOWS
+        builder.Services.AddSingleton<ISpeechService, WindowsSpeechService>();
+#else
+        builder.Services.AddSingleton<ISpeechService, DefaultSpeechService>();
+#endif
         builder.Services.AddSingleton<IStartSequenceService, StartSequenceService>();
         builder.Services.AddTransient<IRaceSocketClient, RaceSocketClient>();
         builder.Services.AddSingleton<IDeviceSettingsService, DeviceSettingsService>();

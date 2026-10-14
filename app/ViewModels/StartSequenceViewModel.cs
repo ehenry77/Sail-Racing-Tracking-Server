@@ -368,12 +368,16 @@ public partial class StartSequenceViewModel : BaseViewModel, IDisposable
             PFlagUp = status.PFlagUp;
             IsSequenceComplete = status.IsComplete;
 
+            // Whole seconds from the service, already rounded so the digits match the spoken countdown.
             var t = status.TimeToStart;
-            CountdownText = t >= TimeSpan.Zero
-                ? $"-{t:mm\\:ss}"
-                : $"+{t.Negate():mm\\:ss}";
+            CountdownText = t > TimeSpan.Zero
+                ? $"-{FormatCountdown(t)}"
+                : t < TimeSpan.Zero ? $"+{FormatCountdown(t.Negate())}" : FormatCountdown(t);
         });
     }
+
+    // Minutes can exceed 59 for a long lead-in, so count total minutes rather than wrapping at the hour.
+    private static string FormatCountdown(TimeSpan t) => $"{(int)t.TotalMinutes:00}:{t.Seconds:00}";
 
     private static string FormatStartAt(DateTimeOffset startAt) => $"Start signal at {startAt.ToLocalTime():HH:mm:ss}";
 

@@ -1,9 +1,14 @@
 namespace SailRacing.Services;
 
 /// <summary>
-/// Drives the RRS-style start sequence off a single 1-second dispatcher timer and a precomputed,
-/// sorted timeline. A cursor index (not a fired-flags set) tracks progress, so a delayed tick fires
-/// every event it missed and self-corrects instead of drifting or double-firing.
+/// Drives the RRS-style start sequence off a single dispatcher timer and a precomputed, sorted timeline.
+/// A cursor index (not a fired-flags set) tracks progress, so a delayed tick fires every event it missed
+/// and self-corrects instead of drifting or double-firing.
+///
+/// The timer ticks every 100 ms rather than every second. A once-a-second timer runs at an arbitrary
+/// phase, so each spoken number could be up to a second late and disagree with the counter on screen;
+/// at 100 ms an event fires within a tenth of a second of its moment, which is when the displayed number
+/// changes (the display rounds the remaining time up, so it reads 10 exactly while "ten" is spoken).
 /// </summary>
 public class StartSequenceService : IStartSequenceService, IDisposable
 {
@@ -11,14 +16,23 @@ public class StartSequenceService : IStartSequenceService, IDisposable
     // the next race without restarting the app.
     private IReadOnlyList<SequenceEvent> _timeline = Array.Empty<SequenceEvent>();
     private readonly SemaphoreSlim _speechLock = new(1, 1);
+    private readonly ISpeechService _speech;
 
     private IDispatcherTimer? _timer;
     private DateTimeOffset _startAt;
     private int _cursor;
     private bool _classFlagUp;
     private bool _pFlagUp;
+    private long _shownSecond = long.MinValue;
     private CancellationTokenSource? _tickCts;
     private CancellationTokenSource _sessionCts = new();
+
+    private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(100);
+
+    public StartSequenceService(ISpeechService speech)
+    {
+        _speech = speech;
+    }
 
     public bool IsRunning { get; private set; }
 
@@ -33,10 +47,16 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         _sessionCts = new CancellationTokenSource();
 
         _timeline = StartSequenceTimeline.Build(AppConfig.LoadSequenceSettings());
+
+        // Render the announcements now, earliest first, so each one starts the instant its moment arrives
+        // instead of after the speech engine's start-up delay.
+        _ = _speech.PrepareAsync(_timeline.Select(e => e.Text).Append("Start sequence cancelled"));
+
         _startAt = startAt;
         _cursor = 0;
         _classFlagUp = false;
         _pFlagUp = false;
+        _shownSecond = long.MinValue;
 
         // Silently fast-forward past anything already in the past (e.g. the app was restarted
         // mid-sequence) so flag state is correct without re-speaking stale countdown numbers. The
@@ -52,7 +72,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         IsRunning = true;
 
         _timer = Application.Current!.Dispatcher.CreateTimer();
-        _timer.Interval = TimeSpan.FromSeconds(1);
+        _timer.Interval = TickInterval;
         _timer.Tick += OnTick;
         _timer.Start();
 
@@ -92,15 +112,22 @@ public class StartSequenceService : IStartSequenceService, IDisposable
     {
         var elapsed = DateTimeOffset.UtcNow - _startAt;
 
+        var fired = false;
         while (_cursor < _timeline.Count && _timeline[_cursor].Offset <= elapsed)
         {
             var evt = _timeline[_cursor];
             ApplyFlagState(evt);
             _ = SpeakAsync(evt);
             _cursor++;
+            fired = true;
         }
 
-        RaiseStatus();
+        // The screen only needs an update when the displayed second changes or something fired — not ten
+        // times a second.
+        if (fired || ShownSecond(elapsed) != _shownSecond)
+        {
+            RaiseStatus();
+        }
 
         if (_cursor >= _timeline.Count)
         {
@@ -165,7 +192,7 @@ public class StartSequenceService : IStartSequenceService, IDisposable
 
         try
         {
-            await TextToSpeech.Default.SpeakAsync(text, cancelToken: token);
+            await _speech.SpeakAsync(text, token);
         }
         catch (OperationCanceledException)
         {
@@ -182,15 +209,24 @@ public class StartSequenceService : IStartSequenceService, IDisposable
         }
     }
 
+    /// <summary>
+    /// The whole second the counter shows: time to start rounded UP before the start (so it reads 10 for the
+    /// whole second in which "ten" is spoken) and time since the start rounded down after it. Positive means
+    /// before the start.
+    /// </summary>
+    private static long ShownSecond(TimeSpan elapsed) =>
+        elapsed < TimeSpan.Zero ? (long)Math.Ceiling(-elapsed.TotalSeconds) : -(long)Math.Floor(elapsed.TotalSeconds);
+
     private void RaiseStatus(bool? isComplete = null, TimeSpan? timeToStart = null)
     {
         var elapsed = DateTimeOffset.UtcNow - _startAt;
+        _shownSecond = ShownSecond(elapsed);
 
         StatusChanged?.Invoke(this, new StartSequenceStatus
         {
             ClassFlagUp = _classFlagUp,
             PFlagUp = _pFlagUp,
-            TimeToStart = timeToStart ?? -elapsed,
+            TimeToStart = timeToStart ?? TimeSpan.FromSeconds(_shownSecond),
             IsComplete = isComplete ?? _cursor >= _timeline.Count
         });
     }
