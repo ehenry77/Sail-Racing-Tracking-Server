@@ -39,6 +39,7 @@ public class SailRacingDatabase : ISailRacingDatabase
             await Connection.CreateTableAsync<Buoy>();
             await Connection.CreateTableAsync<StartLine>();
             await Connection.CreateTableAsync<ResultPublication>();
+            await Connection.CreateTableAsync<PendingTimingUpdate>();
 
             _initialized = true;
         }

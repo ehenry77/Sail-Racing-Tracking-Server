@@ -108,6 +108,50 @@ paths:
       responses:
         '200':
           description: OK
+  /api/races/{id}/timing:
+    post:
+      summary: Manual timing from a committee PC (laps, finishes, DNF/DNS/RET/OCS)
+      description: >
+        Each boat's entry carries `updatedAtMs`, the time the committee made it (epoch ms, from its own clock).
+        The newest write wins per boat: an entry older than what the server already holds for that boat (a
+        GPS-detected lap, or another PC's entry) is reported as stale and ignored, so a PC that was offline can
+        send its queue later without overwriting anything more recent. Applied entries are broadcast to the race
+        (`lapCompleted`, `finalLap`, `finished`, `boatTiming`). Status is case-insensitive.
+      parameters:
+        - $ref: '#/components/parameters/RaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boats:
+                  type: array
+                  items:
+                    type: object
+                    required: [participantId, lapsCompleted, status, updatedAtMs]
+                    properties:
+                      participantId: { type: string }
+                      lapsCompleted: { type: integer, minimum: 0 }
+                      isOnFinalLap: { type: boolean }
+                      status: { type: string, enum: [Racing, Finished, DNF, DNS, RET, OCS] }
+                      finishTime: { type: string, format: date-time, nullable: true }
+                      elapsedSeconds: { type: number, nullable: true }
+                      updatedAtMs: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Which boats were applied, ignored as stale, or rejected (unknown boat / invalid entry)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applied: { type: array, items: { type: string } }
+                  stale: { type: array, items: { type: string } }
+                  rejected: { type: array, items: { type: string } }
+        '404':
+          description: Race not found
   /api/races/{id}/results:
     post:
       summary: Publish results for a race

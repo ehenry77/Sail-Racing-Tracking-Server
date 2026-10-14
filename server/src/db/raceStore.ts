@@ -235,9 +235,10 @@ export function setStartAt(raceId: string, startAt: string): void {
 export function resetBoatStates(raceId: string): void {
   db.prepare(
     `UPDATE race_boat_state SET lapsCompleted = 0, isOnFinalLap = 0, status = 'Racing', finishTime = NULL,
-       elapsedSeconds = NULL, correctedSeconds = NULL, rank = NULL, currentTargetIndex = 0, armed = 1
+       elapsedSeconds = NULL, correctedSeconds = NULL, rank = NULL, currentTargetIndex = 0, armed = 1,
+       timingUpdatedAt = ?
      WHERE raceId = ?`
-  ).run(raceId);
+  ).run(Date.now(), raceId);
 }
 
 export function setAllClear(raceId: string): void {
@@ -341,11 +342,17 @@ const updateTrackerStateStmt = db.prepare(`
       finishTime = ?,
       elapsedSeconds = ?,
       currentTargetIndex = ?,
-      armed = ?
+      armed = ?,
+      timingUpdatedAt = CASE WHEN ? = 1 THEN ? ELSE timingUpdatedAt END
   WHERE raceId = ? AND participantId = ?
 `);
 
-export function updateBoatTrackerState(state: BoatTrackerState): void {
+/**
+ * Saves the tracker's per-fix state. `changed` is true only when the fix produced a lap / final-lap / finish,
+ * and only then is the boat's timing stamp moved forward — every ordinary fix rewrites this row, and stamping
+ * those would make a committee entry that is still queued on an offline PC look older than the data.
+ */
+export function updateBoatTrackerState(state: BoatTrackerState, changed: boolean): void {
   updateTrackerStateStmt.run(
     state.lapsCompleted,
     state.isOnFinalLap ? 1 : 0,
@@ -354,6 +361,8 @@ export function updateBoatTrackerState(state: BoatTrackerState): void {
     state.elapsedSeconds,
     state.currentTargetIndex,
     state.armed ? 1 : 0,
+    changed ? 1 : 0,
+    Date.now(),
     state.raceId,
     state.participantId
   );
@@ -364,4 +373,60 @@ export function getRaceStatus(raceId: string): RaceDto['status'] | null {
     | { status: RaceDto['status'] }
     | undefined;
   return row?.status ?? null;
+}
+
+export interface BoatTimingUpdate {
+  participantId: string;
+  lapsCompleted: number;
+  isOnFinalLap: boolean;
+  status: RaceParticipantStatus;
+  finishTime: string | null;
+  elapsedSeconds: number | null;
+  /** When the committee made the change (epoch ms, from its own clock). */
+  updatedAtMs: number;
+}
+
+export interface BoatTimingResult {
+  outcome: 'applied' | 'stale' | 'unknown';
+  previous?: BoatTrackerState;
+  current?: BoatTrackerState;
+}
+
+/**
+ * Sets one boat's lap count / status / finish from a committee PC (manual entries on the Timing Sheet).
+ * The newest write wins: an update older than what the server already holds for that boat — a GPS-detected
+ * lap, or another PC's entry — is ignored, which is what lets a PC that was offline send its queue later
+ * without overwriting anything newer. The boat's course position restarts and the finish line is disarmed,
+ * so a crossing the committee just recorded isn't counted a second time by the GPS tracker.
+ */
+export function setBoatTiming(raceId: string, update: BoatTimingUpdate): BoatTimingResult {
+  const previous = getBoatTrackerState(raceId, update.participantId);
+  if (!previous) {
+    return { outcome: 'unknown' };
+  }
+
+  const stored = db
+    .prepare('SELECT timingUpdatedAt FROM race_boat_state WHERE raceId = ? AND participantId = ?')
+    .get(raceId, update.participantId) as { timingUpdatedAt: number };
+  if (update.updatedAtMs < stored.timingUpdatedAt) {
+    return { outcome: 'stale', previous };
+  }
+
+  db.prepare(
+    `UPDATE race_boat_state
+     SET lapsCompleted = ?, isOnFinalLap = ?, status = ?, finishTime = ?, elapsedSeconds = ?,
+         currentTargetIndex = 0, armed = 0, timingUpdatedAt = ?
+     WHERE raceId = ? AND participantId = ?`
+  ).run(
+    update.lapsCompleted,
+    update.isOnFinalLap ? 1 : 0,
+    update.status,
+    update.finishTime,
+    update.elapsedSeconds,
+    update.updatedAtMs,
+    raceId,
+    update.participantId
+  );
+
+  return { outcome: 'applied', previous, current: getBoatTrackerState(raceId, update.participantId) ?? undefined };
 }

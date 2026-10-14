@@ -40,7 +40,9 @@ public static class MauiProgram
         // fails fast instead of leaving the UI hanging for HttpClient's 100-second default.
         builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(8) });
         builder.Services.AddSingleton<ISailRacingApiClient, SailRacingApiClient>();
+        builder.Services.AddSingleton<TimingOutbox>();
         builder.Services.AddSingleton<IRaceSyncService, RaceSyncService>();
+        builder.Services.AddSingleton<IRaceTakeOverService, RaceTakeOverService>();
         // Singleton: one start sequence runs at a time, and it must survive leaving/re-entering the page.
         // Transient would let a re-entered page start a second timer while the first keeps announcing.
 #if WINDOWS

@@ -125,6 +125,6 @@ export function processPosition(
     }
   }
 
-  updateBoatTrackerState(state);
+  updateBoatTrackerState(state, events.length > 0);
   return events;
 }

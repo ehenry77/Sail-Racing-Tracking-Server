@@ -61,6 +61,9 @@ export function createSchema(db: DatabaseSync): void {
       rank INTEGER,
       currentTargetIndex INTEGER NOT NULL DEFAULT 0,
       armed INTEGER NOT NULL DEFAULT 1,
+      -- When this boat's timing state was last written (epoch ms), by the GPS tracker or by a committee PC.
+      -- A committee update older than this is ignored, so a PC that was offline can't overwrite newer data.
+      timingUpdatedAt INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (raceId, participantId)
     );
 

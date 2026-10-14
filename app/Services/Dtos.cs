@@ -90,3 +90,22 @@ public class ResultPublicationDto
     public DateTimeOffset PublishedAt { get; set; }
     public List<ResultEntryDto> Results { get; set; } = new();
 }
+
+/// <summary>One boat's manual timing state, sent to the server (newest write wins per boat).</summary>
+public class BoatTimingDto
+{
+    public string ParticipantId { get; set; } = string.Empty;
+    public int LapsCompleted { get; set; }
+    public bool IsOnFinalLap { get; set; }
+    public string Status { get; set; } = "Racing";
+    public DateTimeOffset? FinishTime { get; set; }
+    public double? ElapsedSeconds { get; set; }
+    public long UpdatedAtMs { get; set; }
+}
+
+public class TimingPushResponse
+{
+    public List<string> Applied { get; set; } = new();
+    public List<string> Stale { get; set; } = new();
+    public List<string> Rejected { get; set; } = new();
+}

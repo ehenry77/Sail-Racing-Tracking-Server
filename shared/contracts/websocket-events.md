@@ -41,6 +41,16 @@ Fired on the finish-line crossing that completes the last lap.
 { "type": "finished", "participantId": "uuid", "finishTime": "ISO-8601", "elapsedSeconds": 0.0 }
 ```
 
+### `boatTiming`
+A boat's full timing state after a committee PC entered a lap, finish or DNF/DNS/RET/OCS by hand
+(`POST /api/races/{id}/timing`). Besides the matching `lapCompleted` / `finalLap` / `finished` events (so the live
+map and replay need nothing new), this carries the whole state, which also expresses corrections that take a boat
+back and the non-finish statuses. Another committee PC applies it to its Timing Sheet.
+```json
+{ "type": "boatTiming", "participantId": "uuid", "lapsCompleted": 2, "isOnFinalLap": true,
+  "status": "Racing|Finished|DNF|DNS|RET|OCS", "finishTime": "ISO-8601|null", "elapsedSeconds": 0.0 }
+```
+
 ### `courseShortened`
 ```json
 { "type": "courseShortened", "raceParticipants": [ { "participantId": "uuid", "laps": 3 } ] }

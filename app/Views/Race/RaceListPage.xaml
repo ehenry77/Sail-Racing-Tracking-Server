@@ -32,7 +32,13 @@
             </CollectionView>
         </RefreshView>
 
-        <Button Text="+ New Race" VerticalOptions="End" HorizontalOptions="End"
-                Command="{Binding NewRaceCommand}" Margin="0,0,0,12" />
+        <VerticalStackLayout VerticalOptions="End" HorizontalOptions="End" Spacing="6" Margin="0,0,0,12">
+            <Label Text="{Binding StatusMessage}" FontSize="12" TextColor="Gray" HorizontalOptions="End" />
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="End">
+                <Button Text="Take over a race…" Command="{Binding TakeOverCommand}"
+                        ToolTipProperties.Text="Continue a race started on another committee PC: pulls it from the server by its join code" />
+                <Button Text="+ New Race" Command="{Binding NewRaceCommand}" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
     </Grid>
 </ContentPage>

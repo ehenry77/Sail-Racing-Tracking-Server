@@ -1,19 +1,26 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SailRacing.Data;
 using SailRacing.Models;
+using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
 public partial class RaceListViewModel : BaseViewModel
 {
     private readonly IRaceRepository _races;
+    private readonly IRaceTakeOverService _takeOver;
 
     public ObservableCollection<Race> Races { get; } = new();
 
-    public RaceListViewModel(IRaceRepository races)
+    [ObservableProperty]
+    private string statusMessage = string.Empty;
+
+    public RaceListViewModel(IRaceRepository races, IRaceTakeOverService takeOver)
     {
         _races = races;
+        _takeOver = takeOver;
         Title = "Races";
     }
 
@@ -45,6 +52,56 @@ public partial class RaceListViewModel : BaseViewModel
     private async Task NewRaceAsync()
     {
         await Shell.Current.GoToAsync("raceSetup");
+    }
+
+    /// <summary>
+    /// Continue a race that another committee PC started (or this one lost): pulls it from the server by its
+    /// join code and opens it where it stands — start sequence, timing sheet or results.
+    /// </summary>
+    [RelayCommand]
+    private async Task TakeOverAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        var entered = await Shell.Current.DisplayPromptAsync(
+            "Take over a race",
+            "Enter the race's join code, or paste one of its links. This PC then carries on from the race as the server holds it " +
+            "— lap counts, finishes and the start time included.",
+            accept: "Take over",
+            cancel: "Cancel",
+            placeholder: "e.g. K7P2M");
+        if (string.IsNullOrWhiteSpace(entered))
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = "Contacting the server…";
+        try
+        {
+            var result = await _takeOver.TakeOverAsync(entered);
+            StatusMessage = result.Message;
+            if (!result.Success || result.Race is null)
+            {
+                return;
+            }
+
+            var items = await _races.GetAllAsync();
+            Races.Clear();
+            foreach (var item in items)
+            {
+                Races.Add(item);
+            }
+
+            await OpenAsync(result.Race);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]

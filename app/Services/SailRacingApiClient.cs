@@ -60,4 +60,29 @@ public class SailRacingApiClient : ISailRacingApiClient
         var response = await _http.PostAsJsonAsync(Url($"/api/races/{payload.RaceId}/results"), payload, JsonOptions, ct);
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<TimingPushResponse> PostTimingAsync(string raceId, List<BoatTimingDto> boats, CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync(Url($"/api/races/{Uri.EscapeDataString(raceId)}/timing"), new { boats }, JsonOptions, ct);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<TimingPushResponse>(JsonOptions, ct)) ?? new TimingPushResponse();
+    }
+
+    public Task<RaceDto?> GetRaceByCodeAsync(string joinCode, CancellationToken ct = default) =>
+        GetRaceAtAsync($"/api/races/by-code/{Uri.EscapeDataString(joinCode)}", ct);
+
+    public Task<RaceDto?> GetRaceAsync(string raceId, CancellationToken ct = default) =>
+        GetRaceAtAsync($"/api/races/{Uri.EscapeDataString(raceId)}", ct);
+
+    private async Task<RaceDto?> GetRaceAtAsync(string path, CancellationToken ct)
+    {
+        var response = await _http.GetAsync(Url(path), ct);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<RaceDto>(JsonOptions, ct);
+    }
 }

@@ -16,10 +16,16 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     private readonly IParticipantRepository _participants;
     private readonly IRaceSocketClient _socket;
     private readonly ISailRacingApiClient _api;
+    private readonly IRaceSyncService _sync;
 
     private readonly JoinCodeWatcher _joinWatcher;
 
     private Race? _race;
+
+    // When each boat was last edited by hand on this PC. The server echoes a manual entry back as events;
+    // applying an echo of an earlier press while a later one is already on screen would flick the count back.
+    private readonly Dictionary<string, DateTime> _manualAt = new();
+    private static readonly TimeSpan EchoWindow = TimeSpan.FromSeconds(5);
 
     public string? RaceId { get; set; }
 
@@ -70,8 +76,10 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         IFleetRepository fleets,
         IParticipantRepository participants,
         IRaceSocketClient socket,
-        ISailRacingApiClient api)
+        ISailRacingApiClient api,
+        IRaceSyncService sync)
     {
+        _sync = sync;
         _races = races;
         _fleets = fleets;
         _participants = participants;
@@ -203,6 +211,11 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
             ConnectionStatusText = connected
                 ? string.Empty
                 : "Not connected to server — lap counts will update once connectivity is restored (reopen this page to retry).";
+
+            if (connected)
+            {
+                await CatchUpWithServerAsync(_race.Id);
+            }
         }
         catch (Exception ex)
         {
@@ -217,6 +230,12 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     {
         MainThread.BeginInvokeOnMainThread(async () =>
         {
+            if (message.Raw.TryGetProperty("participantId", out var pid) && pid.ValueKind == JsonValueKind.String
+                && _manualAt.TryGetValue(pid.GetString()!, out var editedAt) && DateTime.UtcNow - editedAt < EchoWindow)
+            {
+                return;
+            }
+
             switch (message.Type)
             {
                 case "lapCompleted":
@@ -230,6 +249,9 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
                     break;
                 case "courseShortened":
                     ApplyCourseShortened(message.Raw);
+                    break;
+                case "boatTiming":
+                    ApplyBoatTiming(message.Raw);
                     break;
             }
 
@@ -279,6 +301,40 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         }
     }
 
+    /// <summary>
+    /// The server's full timing state for one boat — sent when a committee PC enters a lap, finish or
+    /// DNF/DNS/RET/OCS. This is what keeps a second committee PC's sheet in step (and it carries corrections
+    /// that undo a lap or a finish, which the lap/finished events can't express).
+    /// </summary>
+    private void ApplyBoatTiming(JsonElement raw)
+    {
+        var entry = FindEntry(raw);
+        if (entry is null)
+        {
+            return;
+        }
+
+        if (raw.TryGetProperty("lapsCompleted", out var lc) && lc.ValueKind == JsonValueKind.Number)
+        {
+            entry.LapsCompleted = lc.GetInt32();
+        }
+
+        entry.IsOnFinalLap = raw.TryGetProperty("isOnFinalLap", out var fl) && fl.ValueKind == JsonValueKind.True;
+
+        if (raw.TryGetProperty("status", out var st) && st.ValueKind == JsonValueKind.String
+            && Enum.TryParse<RaceParticipantStatus>(st.GetString(), ignoreCase: true, out var status))
+        {
+            entry.Status = status;
+        }
+
+        entry.FinishTime = raw.TryGetProperty("finishTime", out var ft) && ft.ValueKind == JsonValueKind.String
+            ? DateTimeOffset.Parse(ft.GetString()!)
+            : null;
+        entry.ElapsedSeconds = raw.TryGetProperty("elapsedSeconds", out var es) && es.ValueKind == JsonValueKind.Number
+            ? es.GetDouble()
+            : null;
+    }
+
     private void ApplyCourseShortened(JsonElement raw)
     {
         if (!raw.TryGetProperty("raceParticipants", out var items))
@@ -320,6 +376,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
     {
         entry.Status = status;
         await PersistAsync();
+        QueueForServer(entry);
     }
 
     /// <summary>Manual offline fallback for lap counting: stamps "now" as this boat's next lap.</summary>
@@ -345,6 +402,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         }
 
         await PersistAsync();
+        QueueForServer(entry);
     }
 
     /// <summary>Manual offline fallback for finish detection: sets this boat's finish time from the
@@ -356,6 +414,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         var finishAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
         ApplyManualFinish(entry, finishAt.ToUniversalTime());
         await PersistAsync();
+        QueueForServer(entry);
     }
 
     [RelayCommand]
@@ -393,6 +452,103 @@ public partial class TimingSheetViewModel : BaseViewModel, IDisposable
         // see the shortened course next time it syncs, not that the committee action itself stalls.
         var raceId = _race.Id;
         _ = SafeCallAsync(() => _api.ShortenCourseAsync(raceId, newLaps));
+    }
+
+    /// <summary>
+    /// Hands a manual entry to the sync service, which stores it in the local queue first and then sends it.
+    /// Not awaited by the UI: the entry is already saved on this PC, so a slow or absent server must never
+    /// hold up the committee. Whatever can't be sent now goes out when the connection returns.
+    /// </summary>
+    private void QueueForServer(RaceTimingEntry entry)
+    {
+        if (_race is null)
+        {
+            return;
+        }
+
+        _manualAt[entry.ParticipantId] = DateTime.UtcNow;
+        var raceId = _race.Id;
+        var boat = new RaceParticipant
+        {
+            ParticipantId = entry.ParticipantId,
+            LapsCompleted = entry.LapsCompleted,
+            IsOnFinalLap = entry.IsOnFinalLap,
+            Status = entry.Status,
+            FinishTime = entry.FinishTime,
+            ElapsedSeconds = entry.ElapsedSeconds
+        };
+        var stamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        _ = SafeCallAsync(() => _sync.QueueTimingAsync(raceId, boat, stamp));
+    }
+
+    /// <summary>True when state <paramref name="a"/> is further along than <paramref name="b"/>: finished (or
+    /// otherwise out) beats still racing, and among racing boats more laps beats fewer.</summary>
+    private static bool IsFurtherAlong(RaceParticipantStatus aStatus, int aLaps, RaceParticipantStatus bStatus, int bLaps)
+    {
+        if (aStatus != RaceParticipantStatus.Racing && bStatus == RaceParticipantStatus.Racing)
+        {
+            return true;
+        }
+
+        return aStatus == RaceParticipantStatus.Racing && bStatus == RaceParticipantStatus.Racing && aLaps > bLaps;
+    }
+
+    /// <summary>
+    /// Brings this sheet and the server level when the page opens, without ever moving a boat backwards:
+    /// where the server is further along (a GPS lap, or the other committee PC's entry) the sheet adopts it;
+    /// where this PC is further along (entries made before they could be sent) they are queued for the
+    /// server. Boats with an unsent entry of their own are left alone. Corrections that take a boat back —
+    /// undoing a lap — travel as live events instead, or by "Take over a race" on the Race list.
+    /// </summary>
+    private async Task CatchUpWithServerAsync(string raceId)
+    {
+        try
+        {
+            var server = await _api.GetRaceAsync(raceId);
+            if (server is null)
+            {
+                return;
+            }
+
+            var pending = await _sync.GetPendingTimingParticipantIdsAsync(raceId);
+            var changedLocally = false;
+
+            foreach (var remote in server.RaceParticipants)
+            {
+                var entry = Entries.FirstOrDefault(e => e.ParticipantId == remote.ParticipantId);
+                if (entry is null || pending.Contains(remote.ParticipantId))
+                {
+                    continue;
+                }
+
+                var remoteStatus = Enum.TryParse<RaceParticipantStatus>(remote.Status, ignoreCase: true, out var parsed)
+                    ? parsed
+                    : RaceParticipantStatus.Racing;
+
+                if (IsFurtherAlong(remoteStatus, remote.LapsCompleted, entry.Status, entry.LapsCompleted))
+                {
+                    entry.LapsCompleted = remote.LapsCompleted;
+                    entry.IsOnFinalLap = remote.IsOnFinalLap;
+                    entry.Status = remoteStatus;
+                    entry.FinishTime = remote.FinishTime;
+                    entry.ElapsedSeconds = remote.ElapsedSeconds;
+                    changedLocally = true;
+                }
+                else if (IsFurtherAlong(entry.Status, entry.LapsCompleted, remoteStatus, remote.LapsCompleted))
+                {
+                    QueueForServer(entry);
+                }
+            }
+
+            if (changedLocally)
+            {
+                await PersistAsync();
+            }
+        }
+        catch
+        {
+            // Best effort: the live events and the outbox still do their work.
+        }
     }
 
     private static async Task SafeCallAsync(Func<Task> call)

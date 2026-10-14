@@ -13,14 +13,18 @@ public class RaceSyncService : IRaceSyncService
     private readonly IFleetRepository _fleets;
     private readonly IParticipantRepository _participants;
     private readonly ISailRacingApiClient _api;
+    private readonly TimingOutbox _timing;
+    private readonly SemaphoreSlim _flushLock = new(1, 1);
     private bool _watcherStarted;
 
     public RaceSyncService(
         IRaceRepository races,
         IFleetRepository fleets,
         IParticipantRepository participants,
-        ISailRacingApiClient api)
+        ISailRacingApiClient api,
+        TimingOutbox timing)
     {
+        _timing = timing;
         _races = races;
         _fleets = fleets;
         _participants = participants;
@@ -69,6 +73,81 @@ public class RaceSyncService : IRaceSyncService
         foreach (var race in races.Where(r => r.SyncStatus != SyncStatus.Synced))
         {
             await PushAsync(race.Id, ct);
+        }
+
+        // After the races themselves: a timing entry can only be delivered to a race the server knows.
+        await FlushTimingAsync(ct);
+    }
+
+    public async Task QueueTimingAsync(string raceId, RaceParticipant boat, long updatedAtMs)
+    {
+        await _timing.EnqueueAsync(new PendingTimingUpdate
+        {
+            RaceId = raceId,
+            ParticipantId = boat.ParticipantId,
+            LapsCompleted = boat.LapsCompleted,
+            IsOnFinalLap = boat.IsOnFinalLap,
+            Status = boat.Status,
+            FinishTime = boat.FinishTime,
+            ElapsedSeconds = boat.ElapsedSeconds,
+            UpdatedAtMs = updatedAtMs
+        });
+
+        await FlushTimingAsync();
+    }
+
+    public async Task<HashSet<string>> GetPendingTimingParticipantIdsAsync(string raceId) =>
+        await _timing.GetParticipantIdsAsync(raceId);
+
+    public async Task FlushTimingAsync(CancellationToken ct = default)
+    {
+        // One flush at a time: two overlapping ones would send the same entries twice (harmless, since the
+        // server keeps the newest, but wasteful) and race on removing them.
+        try
+        {
+            await _flushLock.WaitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        try
+        {
+            var pending = await _timing.GetAllAsync();
+            foreach (var group in pending.GroupBy(p => p.RaceId))
+            {
+                try
+                {
+                    var body = group.Select(p => new BoatTimingDto
+                    {
+                        ParticipantId = p.ParticipantId,
+                        LapsCompleted = p.LapsCompleted,
+                        IsOnFinalLap = p.IsOnFinalLap,
+                        Status = p.Status.ToString(),
+                        FinishTime = p.FinishTime,
+                        ElapsedSeconds = p.ElapsedSeconds,
+                        UpdatedAtMs = p.UpdatedAtMs
+                    }).ToList();
+
+                    // Applied and stale entries are both finished with (a stale one lost to something newer);
+                    // only entries the server couldn't place at all (unknown boat) are kept.
+                    var result = await _api.PostTimingAsync(group.Key, body, ct);
+                    var keep = result.Rejected.ToHashSet();
+                    foreach (var sent in group.Where(p => !keep.Contains(p.ParticipantId)))
+                    {
+                        await _timing.RemoveIfUnchangedAsync(sent);
+                    }
+                }
+                catch
+                {
+                    // Server unreachable or the race isn't on it yet: stays queued for the next attempt.
+                }
+            }
+        }
+        finally
+        {
+            _flushLock.Release();
         }
     }
 
