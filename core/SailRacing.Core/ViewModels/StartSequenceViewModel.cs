@@ -7,7 +7,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-public partial class StartSequenceViewModel : BaseViewModel, IHasRaceId, IDisposable
+public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDisposable
 {
     private readonly IRaceRepository _races;
     private readonly IParticipantRepository _participants;
@@ -110,7 +110,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IHasRaceId, IDispos
         {
             IsSequenceStarted = true;
             StartAtText = FormatStartAt(_race.StartAt.Value);
-            _sequence.Start(_race.StartAt.Value);
+            _sequence.Start(_race.StartAt.Value, _race.Id);
         }
         else
         {
@@ -139,6 +139,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IHasRaceId, IDispos
         }
 
         MapUrl = JoinLinks.BuildMap(aggregate.Race.JoinCode);
+        ShowRace(aggregate.Race.Name, aggregate.Race.JoinCode);
 
         // The server assigns the join code during the background sync from Race Setup, which often lands a
         // moment after this page loads — pick it up when it does rather than showing "not synced" until
@@ -157,6 +158,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IHasRaceId, IDispos
         }
 
         MapUrl = JoinLinks.BuildMap(fresh.JoinCode);
+        ShowRace(fresh.Name, fresh.JoinCode);
     }
 
     [RelayCommand]
@@ -257,7 +259,7 @@ public partial class StartSequenceViewModel : BaseViewModel, IHasRaceId, IDispos
         StopPreStartTimer();
         IsSequenceStarted = true;
         StartAtText = FormatStartAt(startAt);
-        _sequence.Start(startAt);
+        _sequence.Start(startAt, raceId);
 
         // Fire-and-forget: the sequence itself runs entirely off the locally-persisted StartAt and
         // must never wait on the network — a down server just means it catches up next time the

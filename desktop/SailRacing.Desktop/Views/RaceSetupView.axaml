@@ -6,8 +6,13 @@
 	<ScrollViewer>
 		<StackPanel Margin="12" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
 
-			<Button Content="‹ Races" Command="{Binding BackToRacesCommand}" HorizontalAlignment="Left"
-			        ToolTip.Tip="Back to the race list" />
+			<StackPanel Classes="row">
+				<Button Content="‹ Races" Command="{Binding BackToRacesCommand}" HorizontalAlignment="Left"
+				        ToolTip.Tip="Back to the race list" />
+				<TextBlock Text="{Binding RaceHeaderText}" Classes="bold" VerticalAlignment="Center"
+				           ToolTip.Tip="The race code: competitors, the live map and other committee PCs (Take over a race) use it to find this race" />
+				<Button Content="Copy code" Classes="small" VerticalAlignment="Center" IsVisible="{Binding HasRaceCode}" Command="{Binding CopyRaceCodeCommand}" />
+			</StackPanel>
 
 			<TextBox Watermark="Race name" Text="{Binding RaceName}" />
 

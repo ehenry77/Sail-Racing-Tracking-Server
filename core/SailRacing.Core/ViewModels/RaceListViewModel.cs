@@ -11,16 +11,25 @@ public partial class RaceListViewModel : BaseViewModel
 {
     private readonly IRaceRepository _races;
     private readonly IRaceTakeOverService _takeOver;
+    private readonly IStartSequenceService _sequence;
+    private readonly TimingOutbox _timingOutbox;
 
-    public ObservableCollection<Race> Races { get; } = new();
+    public ObservableCollection<RaceListItem> Races { get; } = new();
 
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
-    public RaceListViewModel(IRaceRepository races, IRaceTakeOverService takeOver, IUiServices ui) : base(ui)
+    public RaceListViewModel(
+        IRaceRepository races,
+        IRaceTakeOverService takeOver,
+        IStartSequenceService sequence,
+        TimingOutbox timingOutbox,
+        IUiServices ui) : base(ui)
     {
         _races = races;
         _takeOver = takeOver;
+        _sequence = sequence;
+        _timingOutbox = timingOutbox;
         Title = "Races";
     }
 
@@ -35,16 +44,21 @@ public partial class RaceListViewModel : BaseViewModel
         IsBusy = true;
         try
         {
-            var items = await _races.GetAllAsync();
-            Races.Clear();
-            foreach (var item in items)
-            {
-                Races.Add(item);
-            }
+            await ReloadAsync();
         }
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        var items = await _races.GetAllAsync();
+        Races.Clear();
+        foreach (var item in items)
+        {
+            Races.Add(new RaceListItem(item));
         }
     }
 
@@ -56,7 +70,7 @@ public partial class RaceListViewModel : BaseViewModel
 
     /// <summary>
     /// Continue a race that another committee PC started (or this one lost): pulls it from the server by its
-    /// join code and opens it where it stands — start sequence, timing sheet or results.
+    /// race code and opens it where it stands — start sequence, timing sheet or results.
     /// </summary>
     [RelayCommand]
     private async Task TakeOverAsync()
@@ -68,7 +82,7 @@ public partial class RaceListViewModel : BaseViewModel
 
         var entered = await Ui.Dialogs.PromptAsync(
             "Take over a race",
-            "Enter the race's join code, or paste one of its links. This PC then carries on from the race as the server holds it " +
+            "Enter the race code, or paste one of the race's links. This PC then carries on from the race as the server holds it " +
             "— lap counts, finishes and the start time included.",
             "Take over",
             "Cancel",
@@ -89,14 +103,62 @@ public partial class RaceListViewModel : BaseViewModel
                 return;
             }
 
-            var items = await _races.GetAllAsync();
-            Races.Clear();
-            foreach (var item in items)
+            await ReloadAsync();
+            await OpenAsync(result.Race);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a race from this PC after asking. Its copy on the server is deliberately left alone — the server has
+    /// no way to tell a mistaken delete from a real one, and the live map, replay and every boat's link depend on it —
+    /// so a deleted race can always be brought back with "Take over a race". Photos taken at the finish stay in the
+    /// Documents folder. If this race's start sequence is the one running, it is stopped.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteAsync(Race race)
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        var inProgress = race.Status is RaceStatus.StartSequence or RaceStatus.Racing;
+        var message =
+            (inProgress ? $"\"{race.Name}\" is in progress. " : string.Empty) +
+            $"Delete \"{race.Name}\" from this PC, with its timing entries here?\n\n" +
+            (string.IsNullOrEmpty(race.JoinCode)
+                ? "It has not been sent to the server."
+                : $"Its copy on the server is kept (live map, replay, boat links), and \"Take over a race\" with the race code {race.JoinCode} brings it back here.");
+
+        if (!await Ui.Dialogs.ConfirmAsync("Delete this race?", message, "Delete race", "Keep it"))
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            // Only stop the sequence if it is this race's — another race may be the one counting down.
+            if (_sequence.RaceId == race.Id && _sequence.IsRunning)
             {
-                Races.Add(item);
+                _sequence.Cancel();
             }
 
-            await OpenAsync(result.Race);
+            await _timingOutbox.RemoveRaceAsync(race.Id);
+            await _races.DeleteAsync(race);
+            await ReloadAsync();
+
+            StatusMessage = string.IsNullOrEmpty(race.JoinCode)
+                ? $"Deleted \"{race.Name}\"."
+                : $"Deleted \"{race.Name}\" from this PC. Its copy on the server was kept — Take over a race with code {race.JoinCode} brings it back.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not delete the race: {ex.Message}";
         }
         finally
         {

@@ -8,7 +8,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-public partial class ResultsViewModel : BaseViewModel, IHasRaceId
+public partial class ResultsViewModel : RaceViewModelBase, IHasRaceId
 {
     private readonly IRaceRepository _races;
     private readonly IParticipantRepository _participants;
@@ -94,6 +94,7 @@ public partial class ResultsViewModel : BaseViewModel, IHasRaceId
 
         _race = aggregate.Race;
         ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
+        ShowRace(_race.Name, _race.JoinCode);
 
         var participantIds = aggregate.RaceParticipants.Select(rp => rp.ParticipantId);
         var participants = await _participants.GetByIdsAsync(participantIds);

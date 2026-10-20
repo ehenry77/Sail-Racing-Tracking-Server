@@ -38,10 +38,13 @@ public class StartSequenceService : IStartSequenceService, IDisposable
 
     public bool IsRunning { get; private set; }
 
+    public string? RaceId { get; private set; }
+
     public event EventHandler<StartSequenceStatus>? StatusChanged;
 
-    public void Start(DateTimeOffset startAt)
+    public void Start(DateTimeOffset startAt, string? raceId = null)
     {
+        RaceId = raceId;
         Stop();
         _tickCts?.Cancel();
         _tickCts = null;

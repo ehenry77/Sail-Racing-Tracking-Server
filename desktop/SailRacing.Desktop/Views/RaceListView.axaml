@@ -8,17 +8,22 @@
 			<ItemsControl ItemsSource="{Binding Races}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<Grid Margin="0,0,0,6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+						<Grid Margin="0,0,0,6" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
 							<StackPanel Grid.Column="0">
 								<TextBlock Text="{Binding Name}" Classes="bold" />
 								<TextBlock Text="{Binding Status}" FontSize="12" />
+								<TextBlock Text="{Binding CodeText}" FontSize="12" Classes="bold"
+								           ToolTip.Tip="The race code: competitors, the live map and other committee PCs (Take over a race) use it to find this race" />
 								<TextBlock Text="{Binding ScheduledStartTime, StringFormat='Scheduled: {0:HH:mm}'}" Classes="dim"
 								           IsVisible="{Binding ScheduledStartTime, Converter={x:Static ObjectConverters.IsNotNull}}" />
 							</StackPanel>
 							<Button Grid.Column="1" Content="Edit"
-							        Command="{Binding $parent[ItemsControl].DataContext.EditCommand}" CommandParameter="{Binding}" />
+							        Command="{Binding $parent[ItemsControl].DataContext.EditCommand}" CommandParameter="{Binding Race}" />
 							<Button Grid.Column="2" Content="Open"
-							        Command="{Binding $parent[ItemsControl].DataContext.OpenCommand}" CommandParameter="{Binding}" />
+							        Command="{Binding $parent[ItemsControl].DataContext.OpenCommand}" CommandParameter="{Binding Race}" />
+							<Button Grid.Column="3" Content="Delete" Classes="danger"
+							        ToolTip.Tip="Delete this race from this PC (its copy on the server is kept)"
+							        Command="{Binding $parent[ItemsControl].DataContext.DeleteCommand}" CommandParameter="{Binding Race}" />
 						</Grid>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>

@@ -34,6 +34,13 @@ public class TimingOutbox
     }
 
     /// <summary>Removes an entry once the server has it — unless a newer one replaced it while it was in flight.</summary>
+    /// <summary>Drops every queued entry of a race — used when the race is deleted from this PC.</summary>
+    public async Task RemoveRaceAsync(string raceId)
+    {
+        await _database.InitializeAsync();
+        await _database.Connection.ExecuteAsync("DELETE FROM PendingTimingUpdate WHERE RaceId = ?", raceId);
+    }
+
     public async Task RemoveIfUnchangedAsync(PendingTimingUpdate sent)
     {
         await _database.InitializeAsync();

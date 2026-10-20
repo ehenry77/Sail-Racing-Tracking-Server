@@ -10,8 +10,14 @@
     <ScrollView>
         <VerticalStackLayout Padding="12" Spacing="16">
 
-            <Button Text="‹ Races" Command="{Binding BackToRacesCommand}" HorizontalOptions="Start"
-                    ToolTipProperties.Text="Back to the race list" />
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="‹ Races" Command="{Binding BackToRacesCommand}" HorizontalOptions="Start"
+                        ToolTipProperties.Text="Back to the race list" />
+                <Label Text="{Binding RaceHeaderText}" FontAttributes="Bold" VerticalOptions="Center"
+                       ToolTipProperties.Text="The race code: competitors, the live map and other committee PCs (Take over a race) use it to find this race" />
+                <Button Text="Copy code" FontSize="11" Padding="8,0" HeightRequest="26" VerticalOptions="Center"
+                        IsVisible="{Binding HasRaceCode}" Command="{Binding CopyRaceCodeCommand}" />
+            </HorizontalStackLayout>
 
             <Entry Placeholder="Race name" Text="{Binding RaceName}" />
 

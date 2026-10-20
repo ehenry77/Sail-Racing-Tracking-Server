@@ -7,7 +7,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-public partial class RaceSetupViewModel : BaseViewModel, IHasRaceId
+public partial class RaceSetupViewModel : RaceViewModelBase, IHasRaceId
 {
     private readonly IRaceRepository _races;
     private readonly IFleetRepository _fleets;
@@ -121,6 +121,7 @@ public partial class RaceSetupViewModel : BaseViewModel, IHasRaceId
                 IsSetupStage = _race.Status == RaceStatus.Setup;
                 MapUrl = JoinLinks.BuildMap(_race.JoinCode);
                 ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
+                ShowRace(_race.Name, _race.JoinCode);
                 RaceName = _race.Name;
                 LapsDefaultText = _race.LapsDefault.ToString();
                 FinishSameAsStart = _race.FinishSameAsStart;
@@ -439,6 +440,7 @@ public partial class RaceSetupViewModel : BaseViewModel, IHasRaceId
     {
         MapUrl = JoinLinks.BuildMap(_race.JoinCode);
         ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
+        ShowRace(_race.Name, _race.JoinCode);
         foreach (var item in RaceParticipants)
         {
             item.JoinUrl = JoinLinks.Build(_race.JoinCode, item.ParticipantId);

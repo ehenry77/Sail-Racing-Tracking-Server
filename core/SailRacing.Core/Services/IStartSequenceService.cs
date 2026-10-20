@@ -15,10 +15,13 @@ public interface IStartSequenceService
 {
     bool IsRunning { get; }
 
+    /// <summary>The race whose sequence was last started (null if started without one).</summary>
+    string? RaceId { get; }
+
     event EventHandler<StartSequenceStatus>? StatusChanged;
 
     /// <summary>Starts (or resumes, after an app restart) the sequence timeline anchored to the given T0.</summary>
-    void Start(DateTimeOffset startAt);
+    void Start(DateTimeOffset startAt, string? raceId = null);
 
     void Stop();
 

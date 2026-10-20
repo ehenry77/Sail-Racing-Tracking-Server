@@ -8,7 +8,7 @@ using SailRacing.Services;
 
 namespace SailRacing.ViewModels;
 
-public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposable
+public partial class TimingSheetViewModel : RaceViewModelBase, IHasRaceId, IDisposable
 {
     private readonly IRaceRepository _races;
     private readonly IFleetRepository _fleets;
@@ -158,6 +158,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
 
         MapUrl = JoinLinks.BuildMap(fresh.JoinCode);
         ReplayUrl = JoinLinks.BuildReplay(fresh.JoinCode);
+        ShowRace(fresh.Name, fresh.JoinCode);
     }
 
     public async Task OnAppearingAsync()
@@ -185,6 +186,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
             (_raceLocation, _raceLocationLabel) = FinishLocationOf(aggregate);
             MapUrl = JoinLinks.BuildMap(_race.JoinCode);
             ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
+            ShowRace(_race.Name, _race.JoinCode);
 
             var participantIds = aggregate.RaceParticipants.Select(rp => rp.ParticipantId);
             var participants = await _participants.GetByIdsAsync(participantIds);

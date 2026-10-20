@@ -8,6 +8,9 @@
 			<StackPanel Classes="row">
 				<Button Content="‹ Races" Command="{Binding BackToRacesCommand}" ToolTip.Tip="Back to the race list" />
 				<Button Content="Edit race" Command="{Binding EditRaceCommand}" />
+				<TextBlock Text="{Binding RaceHeaderText}" Classes="bold" VerticalAlignment="Center"
+				           ToolTip.Tip="The race code: competitors, the live map and other committee PCs (Take over a race) use it to find this race" />
+				<Button Content="Copy code" Classes="small" VerticalAlignment="Center" IsVisible="{Binding HasRaceCode}" Command="{Binding CopyRaceCodeCommand}" />
 			</StackPanel>
 			<StackPanel Orientation="Horizontal" Spacing="6">
 				<TextBlock Text="{Binding ReplayLinkText}" Classes="dim" VerticalAlignment="Center"
