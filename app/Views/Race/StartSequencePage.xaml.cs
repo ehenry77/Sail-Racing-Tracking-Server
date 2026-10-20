@@ -6,11 +6,6 @@ namespace SailRacing.Views.Race;
 [QueryProperty(nameof(RaceId), "raceId")]
 public partial class StartSequencePage : ContentPage
 {
-    // Must match the flag stage Grid's RowDefinitions in the XAML (row1 + row2 heights): the distance
-    // a flag card travels from its resting position (below the counter, row 2) to its hoisted position
-    // (above the counter, row 0).
-    private const double FlagTravelDistance = 200;
-
     private readonly StartSequenceViewModel _viewModel;
 
     /// <summary>Set by Shell from the "raceId" query value before the page appears.</summary>
@@ -31,11 +26,13 @@ public partial class StartSequencePage : ContentPage
         base.OnAppearing();
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        await _viewModel.OnAppearingAsync();
+        // A fade interrupted by leaving the page must not leave a flag see-through.
+        foreach (var flag in new VisualElement[] { ClassFlagUpView, ClassFlagDownView, PFlagUpView, PFlagDownView })
+        {
+            flag.Opacity = 1;
+        }
 
-        // Reflect whatever flag state we already know (e.g. resuming mid-sequence) without animating.
-        SetFlagPosition(ClassFlagCard, _viewModel.ClassFlagUp, animate: false);
-        SetFlagPosition(PFlagCard, _viewModel.PFlagUp, animate: false);
+        await _viewModel.OnAppearingAsync();
     }
 
     protected override void OnDisappearing()
@@ -47,27 +44,22 @@ public partial class StartSequencePage : ContentPage
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // The flag that has just appeared — in the row above the counter when hoisted, below it when lowered —
+        // fades in. Its visibility itself comes from the bindings in the XAML.
         switch (e.PropertyName)
         {
             case nameof(StartSequenceViewModel.ClassFlagUp):
-                SetFlagPosition(ClassFlagCard, _viewModel.ClassFlagUp, animate: true);
+                _ = FadeIn(_viewModel.ClassFlagUp ? ClassFlagUpView : ClassFlagDownView);
                 break;
             case nameof(StartSequenceViewModel.PFlagUp):
-                SetFlagPosition(PFlagCard, _viewModel.PFlagUp, animate: true);
+                _ = FadeIn(_viewModel.PFlagUp ? PFlagUpView : PFlagDownView);
                 break;
         }
     }
 
-    private static void SetFlagPosition(VisualElement flagCard, bool isUp, bool animate)
+    private static async Task FadeIn(VisualElement flag)
     {
-        var targetY = isUp ? -FlagTravelDistance : 0;
-        if (animate)
-        {
-            _ = flagCard.TranslateTo(0, targetY, 450, Easing.CubicInOut);
-        }
-        else
-        {
-            flagCard.TranslationY = targetY;
-        }
+        flag.Opacity = 0;
+        await flag.FadeTo(1, 450, Easing.CubicOut);
     }
 }

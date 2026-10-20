@@ -30,7 +30,7 @@
             </HorizontalStackLayout>
             <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding HasScheduledStartTime}">
                 <DatePicker Grid.Column="0" Date="{Binding ScheduledStartDate}" />
-                <TimePicker Grid.Column="1" Time="{Binding ScheduledStartTimeOfDay}" />
+                <TimePicker Grid.Column="1" Time="{Binding ScheduledStartTimeOfDay}" Format="HH:mm" />
             </Grid>
 
             <Label Text="Start line" FontAttributes="Bold" />

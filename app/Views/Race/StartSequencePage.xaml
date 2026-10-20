@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SailRacing.ViewModels;assembly=SailRacing.Core"
+             xmlns:flags="clr-namespace:SailRacing.Views.Race.Controls"
              x:Class="SailRacing.Views.Race.StartSequencePage"
              x:DataType="vm:StartSequenceViewModel"
              Title="{Binding Title}">
@@ -26,47 +27,29 @@
                        IsVisible="{Binding HasScheduledStartTime, Converter={StaticResource InvertedBoolConverter}}" />
             </VerticalStackLayout>
 
-            <!-- Flag stage: flags rest below the counter (row 2) and animate up above it (row 0)
-                 when hoisted — see StartSequencePage.xaml.cs. Row heights must match FlagTravelDistance. -->
-            <Grid RowDefinitions="100,100,100" HorizontalOptions="Center" WidthRequest="320" IsClippedToBounds="False">
+            <!-- Flag stage: three rows. A flag that is up is shown in the top row, just above the counter;
+                 a flag that is down rests in the bottom row. (Sliding the flags between the two with a
+                 translation made them vanish on Windows, so each flag is simply shown where it belongs and
+                 fades in — see StartSequencePage.xaml.cs.) The two rows share the same columns, so a flag
+                 hoisted from the bottom row appears straight above where it was. -->
+            <Grid RowDefinitions="100,100,100" HorizontalOptions="Center" WidthRequest="320">
+
+                <Grid Grid.Row="0" ColumnDefinitions="110,100" ColumnSpacing="20" HorizontalOptions="Center" VerticalOptions="End">
+                    <flags:ClassFlagView x:Name="ClassFlagUpView" Grid.Column="0" VerticalOptions="End"
+                                         IsVisible="{Binding ClassFlagUp}" />
+                    <flags:PFlagView x:Name="PFlagUpView" Grid.Column="1" VerticalOptions="End"
+                                     IsVisible="{Binding PFlagUp}" />
+                </Grid>
 
                 <Label Grid.Row="1" Text="{Binding CountdownText}" FontSize="64" HorizontalOptions="Center"
                        VerticalOptions="Center" IsVisible="{Binding IsSequenceStarted}" />
 
-                <!-- The flag container spans the whole stage and each card sits at its bottom edge. A card translated
-                     outside its parent's bounds is clipped away on Windows (the flags vanished instead of rising),
-                     so the parent must cover the area the flags travel through. -->
-                <HorizontalStackLayout Grid.Row="0" Grid.RowSpan="3" Spacing="36" HorizontalOptions="Center"
-                                       VerticalOptions="Fill" IsClippedToBounds="False">
-
-                    <VerticalStackLayout x:Name="ClassFlagCard" HorizontalOptions="Center" VerticalOptions="End" Spacing="4">
-                        <Grid ColumnDefinitions="6,90" HeightRequest="60" WidthRequest="96">
-                            <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
-                            <HorizontalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0">
-                                <BoxView Color="White" WidthRequest="20" HeightRequest="34" />
-                                <BoxView Color="#1565C0" WidthRequest="20" HeightRequest="34" />
-                                <BoxView Color="#C62828" WidthRequest="20" HeightRequest="34" />
-                                <BoxView Color="#F9A825" WidthRequest="20" HeightRequest="34" />
-                            </HorizontalStackLayout>
-                        </Grid>
-                        <Label Text="Class flag" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
-                               ToolTipProperties.Text="Warning signal — hoisted at the first signal time (Settings → Start sequence; 5 minutes before the start by default)" />
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout x:Name="PFlagCard" HorizontalOptions="Center" VerticalOptions="End" Spacing="4">
-                        <Grid ColumnDefinitions="6,60" HeightRequest="60" WidthRequest="66">
-                            <BoxView Grid.Column="0" Color="#888888" WidthRequest="4" HorizontalOptions="Center" VerticalOptions="Fill" />
-                            <Border Grid.Column="1" BackgroundColor="#1565C0" Stroke="#0d47a1" StrokeThickness="1.5"
-                                    HeightRequest="34" WidthRequest="52" HorizontalOptions="Start" VerticalOptions="Start" Margin="2,4,0,0">
-                                <BoxView Color="White" WidthRequest="18" HeightRequest="16"
-                                         HorizontalOptions="Center" VerticalOptions="Center" />
-                            </Border>
-                        </Grid>
-                        <Label Text="Preparatory (P)" FontSize="12" TextColor="Gray" HorizontalOptions="Center"
-                               ToolTipProperties.Text="Preparatory signal flag 'P' (Blue Peter) — hoisted and lowered at the times set in Settings → Start sequence (4 minutes and 1 minute before the start by default)" />
-                    </VerticalStackLayout>
-
-                </HorizontalStackLayout>
+                <Grid Grid.Row="2" ColumnDefinitions="110,100" ColumnSpacing="20" HorizontalOptions="Center" VerticalOptions="Start">
+                    <flags:ClassFlagView x:Name="ClassFlagDownView" Grid.Column="0" VerticalOptions="Start"
+                                         IsVisible="{Binding ClassFlagUp, Converter={StaticResource InvertedBoolConverter}}" />
+                    <flags:PFlagView x:Name="PFlagDownView" Grid.Column="1" VerticalOptions="Start"
+                                     IsVisible="{Binding PFlagUp, Converter={StaticResource InvertedBoolConverter}}" />
+                </Grid>
             </Grid>
 
             <Label Text="{Binding StartAtText}" FontSize="18" HorizontalOptions="Center" TextColor="Gray"

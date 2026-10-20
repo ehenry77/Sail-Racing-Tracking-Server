@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SailRacing.Desktop.Views.Controls.PFlag">
+
+	<!-- The preparatory flag "P" (Blue Peter): blue with a white square. -->
+	<StackPanel Spacing="4" HorizontalAlignment="Center">
+		<Grid ColumnDefinitions="6,60" Height="60" Width="66">
+			<Border Grid.Column="0" Background="#888888" Width="4" HorizontalAlignment="Center" />
+			<Border Grid.Column="1" Background="#1565C0" BorderBrush="#0D47A1" BorderThickness="1.5"
+			        Height="34" Width="52" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2,4,0,0">
+				<Border Background="White" Width="18" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+			</Border>
+		</Grid>
+		<TextBlock Text="Preparatory (P)" FontSize="12" Foreground="Gray" HorizontalAlignment="Center"
+		           ToolTip.Tip="Preparatory signal flag 'P' (Blue Peter) — hoisted and lowered at the times set in Settings → Start sequence (4 minutes and 1 minute before the start by default)" />
+	</StackPanel>
+</UserControl>

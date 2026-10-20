@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SailRacing.Desktop.Views.Controls.ClassFlag">
+
+	<!-- The class flag: white, blue, red and yellow panels on a pole. -->
+	<StackPanel Spacing="4" HorizontalAlignment="Center">
+		<Grid ColumnDefinitions="6,90" Height="60" Width="96">
+			<Border Grid.Column="0" Background="#888888" Width="4" HorizontalAlignment="Center" />
+			<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2,4,0,0">
+				<Border Background="White" BorderBrush="#BBBBBB" BorderThickness="1" Width="20" Height="34" />
+				<Border Background="#1565C0" Width="20" Height="34" />
+				<Border Background="#C62828" Width="20" Height="34" />
+				<Border Background="#F9A825" Width="20" Height="34" />
+			</StackPanel>
+		</Grid>
+		<TextBlock Text="Class flag" FontSize="12" Foreground="Gray" HorizontalAlignment="Center"
+		           ToolTip.Tip="Warning signal — hoisted at the first signal time (Settings → Start sequence; 5 minutes before the start by default)" />
+	</StackPanel>
+</UserControl>

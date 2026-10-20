@@ -178,7 +178,8 @@
     return (h ? `${h}:${pad(m)}` : pad(m)) + `:${pad(s % 60)}`;
   }
   function updateClock() {
-    const wall = new Date(current).toLocaleTimeString();
+    // 24-hour clock whatever the browser's locale (h23 so midnight reads 00:xx, not 24:xx).
+    const wall = new Date(current).toLocaleTimeString([], { hourCycle: 'h23', hour: '2-digit', minute: '2-digit', second: '2-digit' });
     clockEl.textContent = startAtMs
       ? `${current < startAtMs ? 'T-' : 'T+'}${formatDuration(current - startAtMs)}  (${wall})`
       : wall;

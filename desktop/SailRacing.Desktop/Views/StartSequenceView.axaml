@@ -1,23 +1,8 @@
 <views:ScreenView xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:SailRacing.Desktop.Views"
+             xmlns:flags="clr-namespace:SailRacing.Desktop.Views.Controls"
              x:Class="SailRacing.Desktop.Views.StartSequenceView">
-
-	<views:ScreenView.Styles>
-		<!-- A flag rests below the counter and glides 200 px up, above it, when hoisted. The stage below is
-		     3 rows of 100, so 200 px is exactly from the bottom row to the top one. -->
-		<Style Selector="StackPanel.flag">
-			<Setter Property="RenderTransform" Value="translateY(0px)" />
-			<Setter Property="Transitions">
-				<Transitions>
-					<TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.45" Easing="CubicEaseInOut" />
-				</Transitions>
-			</Setter>
-		</Style>
-		<Style Selector="StackPanel.flag.up">
-			<Setter Property="RenderTransform" Value="translateY(-200px)" />
-		</Style>
-	</views:ScreenView.Styles>
 
 	<ScrollViewer>
 		<StackPanel Margin="24" Spacing="12" HorizontalAlignment="Center" MaxWidth="760">
@@ -37,41 +22,23 @@
 				           IsVisible="{Binding !HasScheduledStartTime}" />
 			</StackPanel>
 
-			<!-- Flag stage -->
+			<!-- Flag stage: three rows. A flag that is up is shown in the top row, just above the counter; a flag
+			     that is down rests in the bottom row. The two rows share their columns, so a hoisted flag appears
+			     straight above where it was resting. -->
 			<Grid RowDefinitions="100,100,100" HorizontalAlignment="Center" Width="320">
+
+				<Grid Grid.Row="0" ColumnDefinitions="110,100" ColumnSpacing="20" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+					<flags:ClassFlag x:Name="ClassFlagUp" Grid.Column="0" VerticalAlignment="Bottom" IsVisible="{Binding ClassFlagUp}" />
+					<flags:PFlag x:Name="PFlagUp" Grid.Column="1" VerticalAlignment="Bottom" IsVisible="{Binding PFlagUp}" />
+				</Grid>
 
 				<TextBlock Grid.Row="1" Text="{Binding CountdownText}" FontSize="64" HorizontalAlignment="Center"
 				           VerticalAlignment="Center" IsVisible="{Binding IsSequenceStarted}" />
 
-				<StackPanel Grid.Row="0" Grid.RowSpan="3" Orientation="Horizontal" Spacing="36" HorizontalAlignment="Center">
-
-					<StackPanel Classes="flag" Classes.up="{Binding ClassFlagUp}" VerticalAlignment="Bottom" Spacing="4">
-						<Grid ColumnDefinitions="6,90" Height="60" Width="96">
-							<Border Grid.Column="0" Background="#888888" Width="4" HorizontalAlignment="Center" />
-							<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2,4,0,0">
-								<Border Background="White" BorderBrush="#BBBBBB" BorderThickness="1" Width="20" Height="34" />
-								<Border Background="#1565C0" Width="20" Height="34" />
-								<Border Background="#C62828" Width="20" Height="34" />
-								<Border Background="#F9A825" Width="20" Height="34" />
-							</StackPanel>
-						</Grid>
-						<TextBlock Text="Class flag" FontSize="12" Foreground="Gray" HorizontalAlignment="Center"
-						           ToolTip.Tip="Warning signal — hoisted at the first signal time (Settings → Start sequence; 5 minutes before the start by default)" />
-					</StackPanel>
-
-					<StackPanel Classes="flag" Classes.up="{Binding PFlagUp}" VerticalAlignment="Bottom" Spacing="4">
-						<Grid ColumnDefinitions="6,60" Height="60" Width="66">
-							<Border Grid.Column="0" Background="#888888" Width="4" HorizontalAlignment="Center" />
-							<Border Grid.Column="1" Background="#1565C0" BorderBrush="#0D47A1" BorderThickness="1.5"
-							        Height="34" Width="52" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2,4,0,0">
-								<Border Background="White" Width="18" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
-							</Border>
-						</Grid>
-						<TextBlock Text="Preparatory (P)" FontSize="12" Foreground="Gray" HorizontalAlignment="Center"
-						           ToolTip.Tip="Preparatory signal flag 'P' (Blue Peter) — hoisted and lowered at the times set in Settings → Start sequence (4 minutes and 1 minute before the start by default)" />
-					</StackPanel>
-
-				</StackPanel>
+				<Grid Grid.Row="2" ColumnDefinitions="110,100" ColumnSpacing="20" HorizontalAlignment="Center" VerticalAlignment="Top">
+					<flags:ClassFlag x:Name="ClassFlagDown" Grid.Column="0" VerticalAlignment="Top" IsVisible="{Binding !ClassFlagUp}" />
+					<flags:PFlag x:Name="PFlagDown" Grid.Column="1" VerticalAlignment="Top" IsVisible="{Binding !PFlagUp}" />
+				</Grid>
 			</Grid>
 
 			<TextBlock Text="{Binding StartAtText}" FontSize="18" HorizontalAlignment="Center" Foreground="Gray"

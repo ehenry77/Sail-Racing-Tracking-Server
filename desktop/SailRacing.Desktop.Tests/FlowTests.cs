@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -141,16 +143,43 @@ public class FlowTests
         Assert.NotNull(stored.StartAt);
         Assert.Equal(RaceStatus.StartSequence, stored.Status);
 
-        // The flags rise when the view model says they are up, and come down again.
-        var flags = screen.GetVisualDescendants().OfType<StackPanel>().Where(p => p.Classes.Contains("flag")).ToList();
-        Assert.Equal(2, flags.Count);
+        // Stop the sequence's own timer so it doesn't reset the flags this test sets by hand.
+        services.GetRequiredService<IStartSequenceService>().Stop();
+
+        // A flag that is up is shown above the counter, one that is down below it — never both, never neither.
+        Control Find(string name) => screen.FindControl<Control>(name)!;
+        void AssertFlags(bool classUp, bool pUp)
+        {
+            Assert.Equal(classUp, Find("ClassFlagUp").IsVisible);
+            Assert.Equal(!classUp, Find("ClassFlagDown").IsVisible);
+            Assert.Equal(pUp, Find("PFlagUp").IsVisible);
+            Assert.Equal(!pUp, Find("PFlagDown").IsVisible);
+        }
+
+        AssertFlags(classUp: false, pUp: false);
         vm.ClassFlagUp = true;
         await Settle(5);
-        Assert.Contains("up", flags[0].Classes);
-        Assert.DoesNotContain("up", flags[1].Classes);
-        vm.ClassFlagUp = false;
+        AssertFlags(classUp: true, pUp: false);
+        // ... and the hoisted flag sits above the counter, which sits above the resting flags.
+        var counter = screen.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == vm.CountdownText && t.FontSize > 50);
+        Assert.True(Find("ClassFlagUp").TranslatePoint(new Point(0, 0), window)!.Value.Y < counter.TranslatePoint(new Point(0, 0), window)!.Value.Y,
+            "the hoisted flag is not above the counter");
+        Assert.True(Find("ClassFlagDown").TranslatePoint(new Point(0, 0), window)!.Value.Y > counter.TranslatePoint(new Point(0, 0), window)!.Value.Y,
+            "the resting flag is not below the counter");
+
+        vm.PFlagUp = true;
         await Settle(5);
-        Assert.DoesNotContain("up", flags[0].Classes);
+        AssertFlags(classUp: true, pUp: true);
+        if ((Environment.GetEnvironmentVariable("SR_SCREENSHOTS") ?? "") is { Length: > 0 } shots)
+        {
+            Directory.CreateDirectory(shots);
+            window.CaptureRenderedFrame()?.Save(Path.Combine(shots, "startSequence-flags-up.png"));
+        }
+
+        vm.ClassFlagUp = false;
+        vm.PFlagUp = false;
+        await Settle(5);
+        AssertFlags(classUp: false, pUp: false);
 
         // Cancel: back to the pre-start screen, start time cleared, announced, and no announcement left running.
         await vm.CancelSequenceCommand.ExecuteAsync(null);
