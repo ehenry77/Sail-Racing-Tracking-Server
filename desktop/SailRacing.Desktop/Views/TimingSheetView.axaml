@@ -92,6 +92,12 @@
 									<Button Content="Copy link" Classes="small" IsVisible="{Binding HasJoinUrl}"
 									        ToolTip.Tip="Copy this boat's personal tracking link, to send to its skipper"
 									        Command="{Binding $parent[ListBox].DataContext.CopyJoinLinkCommand}" CommandParameter="{Binding}" />
+									<Button Content="Take photo" Classes="small"
+									        ToolTip.Tip="Take a photo of this boat now, stamped with the time (24 h) and the GPS position"
+									        Command="{Binding $parent[ListBox].DataContext.TakePhotoCommand}" CommandParameter="{Binding}" />
+									<Button Content="View photo" Classes="small" IsVisible="{Binding HasPhoto}"
+									        ToolTip.Tip="Open the photo taken at this boat's finish"
+									        Command="{Binding $parent[ListBox].DataContext.OpenPhotoCommand}" CommandParameter="{Binding}" />
 								</StackPanel>
 							</StackPanel>
 							<TextBlock Grid.Column="1" Text="FINAL LAP" Foreground="OrangeRed" FontWeight="Bold"

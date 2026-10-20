@@ -61,6 +61,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<!-- Drawing the caption on finish photos; referenced here too so the phone/tablet builds get their native parts. -->
+		<PackageReference Include="SkiaSharp" Version="2.88.9" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
 	</ItemGroup>
 

@@ -175,6 +175,11 @@ public class RaceTakeOverService : IRaceTakeOverService
             })
             .ToList();
 
+        // The photos live only on this PC; a refresh from the server must not forget them.
+        var photos = aggregate.RaceParticipants
+            .Where(p => !string.IsNullOrEmpty(p.FinishPhotoPath))
+            .ToDictionary(p => p.ParticipantId, p => p.FinishPhotoPath);
+
         aggregate.RaceParticipants = dto.RaceParticipants
             .Select(rp => new RaceParticipant
             {
@@ -186,7 +191,8 @@ public class RaceTakeOverService : IRaceTakeOverService
                 FinishTime = rp.FinishTime,
                 ElapsedSeconds = rp.ElapsedSeconds,
                 CorrectedSeconds = rp.CorrectedSeconds,
-                Rank = rp.Rank
+                Rank = rp.Rank,
+                FinishPhotoPath = photos.GetValueOrDefault(rp.ParticipantId)
             })
             .ToList();
 

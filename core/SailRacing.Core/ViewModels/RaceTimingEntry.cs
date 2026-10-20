@@ -37,6 +37,13 @@ public partial class RaceTimingEntry : ObservableObject
     [ObservableProperty]
     private double? elapsedSeconds;
 
+    /// <summary>The photo taken at this boat's finish, if any.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPhoto))]
+    private string? photoPath;
+
+    public bool HasPhoto => !string.IsNullOrEmpty(PhotoPath);
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasJoinUrl))]
     [NotifyPropertyChangedFor(nameof(JoinLinkText))]

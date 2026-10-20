@@ -47,8 +47,10 @@ public static class MauiProgram
         // Per-platform pieces the core needs.
 #if WINDOWS
         builder.Services.AddSingleton<ISpeechService, WindowsSpeechService>();
+        builder.Services.AddSingleton<ICameraService, WindowsCameraService>();
 #else
         builder.Services.AddSingleton<ISpeechService, MauiTextSpeechService>();
+        builder.Services.AddSingleton<ICameraService, MauiCameraService>();
 #endif
         builder.Services.AddSingleton<IDeviceSettingsService, DeviceSettingsService>();
 

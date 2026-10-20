@@ -99,3 +99,6 @@ server/*.db-wal
 server/*.db-shm
 .env
 .env.local
+
+## Published builds (dotnet publish -o publish/...)
+publish/

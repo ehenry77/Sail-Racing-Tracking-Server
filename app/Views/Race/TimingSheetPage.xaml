@@ -56,7 +56,7 @@
                 <Label Text="Finish time" FontSize="12" TextColor="Gray" />
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                     <DatePicker Grid.Column="0" Date="{Binding EditFinishDate}" />
-                    <TimePicker Grid.Column="1" Time="{Binding EditFinishTimeOfDay}" />
+                    <TimePicker Grid.Column="1" Time="{Binding EditFinishTimeOfDay}" Format="HH:mm" />
                 </Grid>
 
                 <HorizontalStackLayout Spacing="8">
@@ -102,6 +102,15 @@
                                             IsVisible="{Binding HasJoinUrl}"
                                             ToolTipProperties.Text="Copy this boat's personal tracking link, to send to its skipper"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=CopyJoinLinkCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Text="Take photo" FontSize="11" Padding="8,0" HeightRequest="26"
+                                            ToolTipProperties.Text="Take a photo of this boat now, stamped with the time (24 h) and the GPS position"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=TakePhotoCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Text="View photo" FontSize="11" Padding="8,0" HeightRequest="26"
+                                            IsVisible="{Binding HasPhoto}"
+                                            ToolTipProperties.Text="Open the photo taken at this boat's finish"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TimingSheetViewModel}}, Path=OpenPhotoCommand}"
                                             CommandParameter="{Binding .}" />
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>

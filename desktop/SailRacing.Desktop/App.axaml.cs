@@ -56,6 +56,7 @@ public partial class App : Application
         services.AddSingleton<IConnectivityService, DesktopConnectivityService>();
         services.AddSingleton<ISpeechService, ProcessSpeechService>();
         services.AddSingleton<IDeviceSettingsService, DesktopDeviceSettingsService>();
+        services.AddSingleton<ICameraService, DesktopCameraService>();
 
         services.AddSailRacingCore();
         services.AddSingleton<ScreenFactory>();

@@ -26,6 +26,9 @@ public sealed class MauiClipboardService : IClipboardService
 public sealed class MauiLauncherService : ILauncherService
 {
     public Task OpenAsync(Uri uri) => Launcher.Default.OpenAsync(uri);
+
+    public Task OpenFileAsync(string path) =>
+        Launcher.Default.OpenAsync(new OpenFileRequest(Path.GetFileName(path), new ReadOnlyFile(path)));
 }
 
 public sealed class MauiFileService : IFileService
@@ -146,4 +149,31 @@ public sealed class MauiTextSpeechService : ISpeechService
 
     public Task SpeakAsync(string text, CancellationToken token) =>
         TextToSpeech.Default.SpeakAsync(text, cancelToken: token);
+}
+
+/// <summary>
+/// The camera on phones and tablets (and Mac Catalyst), through the system camera screen. There is no live camera to
+/// warm up there: the system's camera app opens when a photo is asked for.
+/// </summary>
+public sealed class MauiCameraService : ICameraService
+{
+    public Task WarmUpAsync(string? deviceId) => Task.CompletedTask;
+
+    public async Task<byte[]> CaptureJpegAsync(string? deviceId)
+    {
+        if (!MediaPicker.Default.IsCaptureSupported)
+        {
+            throw new InvalidOperationException("this device has no camera the app can use");
+        }
+
+        var photo = await MediaPicker.Default.CapturePhotoAsync()
+            ?? throw new InvalidOperationException("no photo was taken");
+
+        await using var stream = await photo.OpenReadAsync();
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+        return memory.ToArray();
+    }
+
+    public Task ReleaseAsync() => Task.CompletedTask;
 }

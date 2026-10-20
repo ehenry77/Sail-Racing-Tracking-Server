@@ -29,6 +29,9 @@ public interface IClipboardService
 public interface ILauncherService
 {
     Task OpenAsync(Uri uri);
+
+    /// <summary>Opens a file (e.g. a photo) in the program the system associates with it.</summary>
+    Task OpenFileAsync(string path);
 }
 
 /// <summary>Files: where exports go, handing a file to the user, and choosing a file to import.</summary>
@@ -105,4 +108,18 @@ public interface IUiDispatcher
     void Post(Action action);
 
     IUiTimer CreateTimer();
+}
+
+/// <summary>The committee PC's camera (a webcam on a desktop), for the photo at a boat's finish.</summary>
+public interface ICameraService
+{
+    /// <summary>Opens the camera ahead of time so a later capture is immediate. Never throws.</summary>
+    Task WarmUpAsync(string? deviceId);
+
+    /// <summary>A JPEG still from the camera (the one chosen in Settings, or the default). Throws
+    /// <see cref="InvalidOperationException"/> with a readable reason when there is no camera or it may not be used.</summary>
+    Task<byte[]> CaptureJpegAsync(string? deviceId);
+
+    /// <summary>Closes the camera. Never throws.</summary>
+    Task ReleaseAsync();
 }

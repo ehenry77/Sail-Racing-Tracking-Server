@@ -4,11 +4,14 @@ using SailRacing.Services.Devices;
 using SailRacing.ViewModels;
 using Xunit;
 
+// Several tests install their own AppConfig settings store (it is static), so tests must not overlap.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace SailRacing.Core.Tests;
 
 /// <summary>Stand-ins for the platform services each app provides.</summary>
 internal sealed class StubPlatform : INavigator, IDialogService, IClipboardService, ILauncherService, IFileService,
-    IGeolocationService, IAppPaths, IConnectivityService, IUiDispatcher, ISpeechService, IDeviceSettingsService
+    IGeolocationService, IAppPaths, IConnectivityService, IUiDispatcher, ISpeechService, IDeviceSettingsService, ICameraService
 {
     public StubPlatform(string dataDirectory) => DataDirectory = dataDirectory;
 
@@ -23,6 +26,10 @@ internal sealed class StubPlatform : INavigator, IDialogService, IClipboardServi
     public Task<string?> PromptAsync(string title, string message, string accept, string cancel, string? placeholder = null) => Task.FromResult<string?>(null);
     public Task SetTextAsync(string text) => Task.CompletedTask;
     public Task OpenAsync(Uri uri) => Task.CompletedTask;
+    public Task OpenFileAsync(string path) => Task.CompletedTask;
+    public Task WarmUpAsync(string? deviceId) => Task.CompletedTask;
+    public Task<byte[]> CaptureJpegAsync(string? deviceId) => Task.FromResult(Array.Empty<byte>());
+    public Task ReleaseAsync() => Task.CompletedTask;
     public Task ShareFileAsync(string title, string path) => Task.CompletedTask;
     public Task<PickedTextFile?> PickTextFileAsync(string title, params string[] extensions) => Task.FromResult<PickedTextFile?>(null);
     public Task<GeoFix?> GetLocationAsync(TimeSpan timeout) => Task.FromResult<GeoFix?>(null);
@@ -59,6 +66,7 @@ public class CompositionTests
         services.AddSingleton<IConnectivityService>(platform);
         services.AddSingleton<ISpeechService>(platform);
         services.AddSingleton<IDeviceSettingsService>(platform);
+        services.AddSingleton<ICameraService>(platform);
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
@@ -66,7 +74,7 @@ public class CompositionTests
         {
             typeof(CompetitorsViewModel), typeof(FleetsViewModel), typeof(RaceListViewModel), typeof(RaceSetupViewModel),
             typeof(StartSequenceViewModel), typeof(TimingSheetViewModel), typeof(ResultsViewModel), typeof(SettingsViewModel),
-            typeof(IRaceSyncService), typeof(IRaceTakeOverService), typeof(IStartSequenceService)
+            typeof(IRaceSyncService), typeof(IRaceTakeOverService), typeof(IStartSequenceService), typeof(IFinishPhotoService)
         })
         {
             Assert.NotNull(provider.GetRequiredService(type));

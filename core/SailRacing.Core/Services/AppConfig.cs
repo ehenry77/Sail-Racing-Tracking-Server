@@ -24,6 +24,15 @@ public static class AppConfig
     private const string GpsSensorDeviceIdKey = "GpsSensorDeviceId";
     private const string GpsSensorDeviceNameKey = "GpsSensorDeviceName";
 
+    private const string AutoFinishPhotoKey = "AutoFinishPhoto";
+
+    /// <summary>Take a photo with the camera automatically when a boat finishes (off until switched on in Settings).</summary>
+    public static bool AutoFinishPhoto
+    {
+        get => Store.Get(AutoFinishPhotoKey) == "1";
+        set => Store.Set(AutoFinishPhotoKey, value ? "1" : "0");
+    }
+
     public static string ServerBaseUrl
     {
         get => (Store.Get(ServerBaseUrlKey) ?? DefaultServerBaseUrl);

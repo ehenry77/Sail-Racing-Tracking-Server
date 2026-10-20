@@ -48,8 +48,13 @@
 				</ComboBox.ItemTemplate>
 			</ComboBox>
 
+			<CheckBox IsChecked="{Binding AutoFinishPhoto}" Content="Take a photo with this camera when a boat finishes"
+			          ToolTip.Tip="The Timing Sheet photographs each boat as it finishes — stamped with the time (24 h) and the GPS position — and saves it under Documents/Sail-Racing photos. You can also take a photo of any boat by hand on the Timing Sheet." />
 			<TextBlock Classes="dim" TextWrapping="Wrap"
-			           Text="On Linux the audio devices come from PulseAudio/PipeWire (pactl) and the cameras from /dev/video*. Nothing in the app streams audio/video yet — these are saved as preferences for a future feature to use. Spoken announcements need espeak-ng installed (sudo apt install espeak-ng); GPS capture is not available on this app — type coordinates in, or capture them with the Windows app." />
+			           Text="Photos are saved on this PC and are not sent to the server. On Linux the camera is read with ffmpeg (or fswebcam): sudo apt install ffmpeg." />
+
+			<TextBlock Classes="dim" TextWrapping="Wrap"
+			           Text="On Linux the audio devices come from PulseAudio/PipeWire (pactl) and the cameras from /dev/video*. The audio devices are saved as preferences for a future feature; the camera is used for the finish photos above. Spoken announcements need espeak-ng installed (sudo apt install espeak-ng); GPS capture is not available on this app — type coordinates in, or capture them with the Windows app." />
 
 			<TextBlock Text="{Binding StatusMessage}" Foreground="Gray" TextWrapping="Wrap" />
 

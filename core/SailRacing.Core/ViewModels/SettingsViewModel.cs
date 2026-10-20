@@ -33,6 +33,10 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty]
     private MediaDeviceInfo? selectedGpsSensor;
 
+    /// <summary>Photograph each boat as it finishes, with the camera chosen above.</summary>
+    [ObservableProperty]
+    private bool autoFinishPhoto;
+
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
@@ -101,6 +105,7 @@ public partial class SettingsViewModel : BaseViewModel
         try
         {
             ServerBaseUrlText = AppConfig.ServerBaseUrl;
+            AutoFinishPhoto = AppConfig.AutoFinishPhoto;
             SequenceAlarmsText = AppConfig.SequenceAlarmsText;
             SequenceCountdownText = AppConfig.SequenceCountdownText;
             SequenceSignalsText = AppConfig.SequenceSignalsText;
@@ -159,6 +164,8 @@ public partial class SettingsViewModel : BaseViewModel
         AppConfig.ServerBaseUrl = string.IsNullOrWhiteSpace(ServerBaseUrlText)
             ? AppConfig.ServerBaseUrl
             : ServerBaseUrlText.Trim();
+
+        AppConfig.AutoFinishPhoto = AutoFinishPhoto;
 
         AppConfig.PreferredAudioOutputDevice = (SelectedAudioOutputDevice?.Id, SelectedAudioOutputDevice?.Name);
         AppConfig.PreferredAudioInputDevice = (SelectedAudioInputDevice?.Id, SelectedAudioInputDevice?.Name);

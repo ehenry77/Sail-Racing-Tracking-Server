@@ -41,4 +41,7 @@ public class RaceParticipant
     public double? CorrectedSeconds { get; set; }
 
     public int? Rank { get; set; }
+
+    /// <summary>The photo taken at this boat's finish (a file on this PC). Never sent to the server.</summary>
+    public string? FinishPhotoPath { get; set; }
 }

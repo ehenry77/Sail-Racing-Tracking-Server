@@ -48,6 +48,12 @@ public sealed class DesktopLauncherService : ILauncherService
         ShellOpen.Open(uri.AbsoluteUri);
         return Task.CompletedTask;
     }
+
+    public Task OpenFileAsync(string path)
+    {
+        ShellOpen.Open(path);
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class DesktopClipboardService : IClipboardService

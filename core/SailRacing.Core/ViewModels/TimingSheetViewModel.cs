@@ -16,10 +16,18 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
     private readonly IRaceSocketClient _socket;
     private readonly ISailRacingApiClient _api;
     private readonly IRaceSyncService _sync;
+    private readonly IFinishPhotoService _photos;
 
     private readonly JoinCodeWatcher _joinWatcher;
 
     private Race? _race;
+
+    // Where the finish line is, for the GPS stamp on a photo when this PC has no location of its own.
+    private GeoFix? _raceLocation;
+    private string _raceLocationLabel = string.Empty;
+
+    // Boats whose photo is being taken right now, so a finish seen twice doesn't take two.
+    private readonly HashSet<string> _photoInFlight = new();
 
     // When each boat was last edited by hand on this PC. The server echoes a manual entry back as events;
     // applying an echo of an earlier press while a later one is already on screen would flick the count back.
@@ -77,9 +85,11 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
         IRaceSocketClient socket,
         ISailRacingApiClient api,
         IRaceSyncService sync,
+        IFinishPhotoService photos,
         IUiServices ui) : base(ui)
     {
         _sync = sync;
+        _photos = photos;
         _races = races;
         _fleets = fleets;
         _participants = participants;
@@ -172,6 +182,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
             }
 
             _race = aggregate.Race;
+            (_raceLocation, _raceLocationLabel) = FinishLocationOf(aggregate);
             MapUrl = JoinLinks.BuildMap(_race.JoinCode);
             ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
 
@@ -193,6 +204,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
                     Status = rp.Status,
                     FinishTime = rp.FinishTime,
                     ElapsedSeconds = rp.ElapsedSeconds,
+                    PhotoPath = rp.FinishPhotoPath,
                     JoinUrl = JoinLinks.Build(_race.JoinCode, rp.ParticipantId)
                 };
                 entry.PropertyChanged += OnEntryPropertyChanged;
@@ -200,6 +212,12 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
             }
 
             ResortEntries();
+
+            // With automatic finish photos on, open the camera now so the picture at the finish is immediate.
+            if (AppConfig.AutoFinishPhoto)
+            {
+                _ = _photos.WarmUpAsync();
+            }
 
             if (string.IsNullOrEmpty(_race.JoinCode))
             {
@@ -288,8 +306,14 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
             return;
         }
 
+        var wasFinished = entry.Status == RaceParticipantStatus.Finished;
         entry.Status = RaceParticipantStatus.Finished;
         entry.IsOnFinalLap = false;
+        if (!wasFinished)
+        {
+            AutoPhoto(entry);
+        }
+
         if (raw.TryGetProperty("finishTime", out var ft) && ft.ValueKind == JsonValueKind.String)
         {
             entry.FinishTime = DateTimeOffset.Parse(ft.GetString()!);
@@ -392,9 +416,11 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
 
         entry.LapsCompleted += 1;
 
+        var finishedNow = false;
         if (entry.LapsCompleted >= entry.Laps)
         {
             ApplyManualFinish(entry, DateTimeOffset.UtcNow);
+            finishedNow = true;
         }
         else
         {
@@ -403,6 +429,11 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
 
         await PersistAsync();
         QueueForServer(entry);
+
+        if (finishedNow)
+        {
+            AutoPhoto(entry);
+        }
     }
 
     /// <summary>Manual offline fallback for finish detection: sets this boat's finish time from the
@@ -427,6 +458,80 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
         entry.LapsCompleted = Math.Max(entry.LapsCompleted, entry.Laps);
         entry.FinishTime = finishAtUtc;
         entry.ElapsedSeconds = _race?.StartAt is { } startAt ? (finishAtUtc - startAt).TotalSeconds : null;
+    }
+
+    /// <summary>The finish line's position, for the GPS stamp: the finish point if it is separate from the start
+    /// line, otherwise the middle of the start/finish line.</summary>
+    private static (GeoFix? Location, string Label) FinishLocationOf(RaceAggregate aggregate)
+    {
+        var race = aggregate.Race;
+        if (!race.FinishSameAsStart && race.FinishLatitude is { } fLat && race.FinishLongitude is { } fLon)
+        {
+            return (new GeoFix(fLat, fLon), "finish point");
+        }
+
+        var line = aggregate.StartLine;
+        if (line.CommitteeLatitude is { } cLat && line.CommitteeLongitude is { } cLon
+            && line.PinLatitude is { } pLat && line.PinLongitude is { } pLon)
+        {
+            return (new GeoFix((cLat + pLat) / 2, (cLon + pLon) / 2), "finish line");
+        }
+
+        return (null, string.Empty);
+    }
+
+    /// <summary>Photographs a boat as it finishes — when that is switched on in Settings and it has no photo yet.</summary>
+    private void AutoPhoto(RaceTimingEntry entry)
+    {
+        if (AppConfig.AutoFinishPhoto && !entry.HasPhoto)
+        {
+            _ = TakePhotoForAsync(entry, isFinish: true);
+        }
+    }
+
+    /// <summary>The "Take photo" button: a photo of this boat now, stamped with the time and place.</summary>
+    [RelayCommand]
+    private Task TakePhotoAsync(RaceTimingEntry entry) => TakePhotoForAsync(entry, entry.IsFinished);
+
+    private async Task TakePhotoForAsync(RaceTimingEntry entry, bool isFinish)
+    {
+        if (!_photoInFlight.Add(entry.ParticipantId))
+        {
+            return;
+        }
+
+        try
+        {
+            InfoMessage = $"Taking a photo of {entry.ParticipantName}…";
+            var result = await _photos.TakeAsync(new FinishPhotoRequest(
+                _race?.Name ?? string.Empty, entry.ParticipantName, entry.LapsCompleted, entry.Laps, isFinish,
+                _raceLocation, _raceLocationLabel));
+
+            if (result.Success)
+            {
+                entry.PhotoPath = result.Path;
+                await PersistAsync();
+            }
+
+            InfoMessage = result.Message;
+        }
+        finally
+        {
+            _photoInFlight.Remove(entry.ParticipantId);
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenPhotoAsync(RaceTimingEntry entry)
+    {
+        if (entry.PhotoPath is { } path && File.Exists(path))
+        {
+            await Ui.Launcher.OpenFileAsync(path);
+        }
+        else
+        {
+            InfoMessage = "That photo file is no longer there.";
+        }
     }
 
     [RelayCommand]
@@ -606,6 +711,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
             rp.Status = entry.Status;
             rp.FinishTime = entry.FinishTime;
             rp.ElapsedSeconds = entry.ElapsedSeconds;
+            rp.FinishPhotoPath = entry.PhotoPath;
         }
 
         await _races.SaveAggregateAsync(aggregate);
@@ -666,6 +772,7 @@ public partial class TimingSheetViewModel : BaseViewModel, IHasRaceId, IDisposab
     public void OnDisappearing()
     {
         _joinWatcher.Stop();
+        _ = _photos.ReleaseAsync();
         _socket.MessageReceived -= OnMessageReceived;
         _ = _socket.DisconnectAsync();
     }

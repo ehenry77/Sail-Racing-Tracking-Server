@@ -15,6 +15,9 @@ using Xunit;
 
 [assembly: AvaloniaTestApplication(typeof(SailRacing.Desktop.Tests.TestAppBuilder))]
 
+// The app keeps its settings in a static store (AppConfig); tests that each install their own must not overlap.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace SailRacing.Desktop.Tests;
 
 public static class TestAppBuilder
