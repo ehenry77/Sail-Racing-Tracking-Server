@@ -53,6 +53,13 @@
 			<TextBlock Classes="dim" TextWrapping="Wrap"
 			           Text="Photos are saved on this PC and are not sent to the server. On Linux the camera is read with ffmpeg (or fswebcam): sudo apt install ffmpeg." />
 
+			<CheckBox IsChecked="{Binding RecordStartVideo}" Content="Record a video of each start, from one minute before the start until All Clear"
+			          ToolTip.Tip="The start video begins one minute before the start and runs until you press All Clear. It is recorded with the camera and microphone chosen in Settings and saved under Documents/Sail-Racing videos. You can also start or stop it by hand on the Start Sequence screen." />
+			<CheckBox IsChecked="{Binding RecordStartVideoSound}" Content="Include the sound from the microphone chosen above" Margin="28,0,0,0"
+			          IsVisible="{Binding RecordStartVideo}" />
+			<TextBlock Classes="dim" TextWrapping="Wrap"
+			           Text="Videos are saved on this PC, not sent to the server. The camera and microphone are on while recording, and the start announcements will be on the sound. The video is recorded with ffmpeg (sudo apt install ffmpeg), which also draws the 24-hour time and GPS position on the picture; a .srt subtitle file beside the video has them for every second." />
+
 			<TextBlock Classes="dim" TextWrapping="Wrap"
 			           Text="On Linux the audio devices come from PulseAudio/PipeWire (pactl) and the cameras from /dev/video*. The audio devices are saved as preferences for a future feature; the camera is used for the finish photos above. Spoken announcements need espeak-ng installed (sudo apt install espeak-ng); GPS capture is not available on this app — type coordinates in, or capture them with the Windows app." />
 

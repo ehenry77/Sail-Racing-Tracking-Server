@@ -63,6 +63,13 @@ public class RaceRepository : IRaceRepository
         }
         else
         {
+            // The start video's location is written by a background service when the recording ends. A screen saving
+            // a copy of the race that was loaded before then must not wipe it out.
+            if (aggregate.Race.StartVideoPath is null && existingRace.StartVideoPath is not null)
+            {
+                aggregate.Race.StartVideoPath = existingRace.StartVideoPath;
+            }
+
             await _database.Connection.UpdateAsync(aggregate.Race);
         }
 
@@ -116,6 +123,12 @@ public class RaceRepository : IRaceRepository
                 await _database.Connection.UpdateAsync(rp);
             }
         }
+    }
+
+    public async Task SetStartVideoPathAsync(string raceId, string? path)
+    {
+        await _database.InitializeAsync();
+        await _database.Connection.ExecuteAsync("UPDATE Race SET StartVideoPath = ? WHERE Id = ?", path, raceId);
     }
 
     public async Task DeleteAsync(Race race)

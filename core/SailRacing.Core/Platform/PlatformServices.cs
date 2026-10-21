@@ -123,3 +123,37 @@ public interface ICameraService
     /// <summary>Closes the camera. Never throws.</summary>
     Task ReleaseAsync();
 }
+
+/// <summary>
+/// The text drawn on the picture of a video: the caption and the GPS line are read from these files on every frame, so
+/// the GPS line can change while recording; the clock is drawn from the machine's own clock. Both files are in one folder.
+/// </summary>
+public sealed record VideoOverlay(string TitleFile, string GpsFile);
+
+/// <param name="HasSound">The microphone's sound is being recorded.</param>
+/// <param name="HasOverlay">The time and GPS are drawn on the picture (not just kept in the subtitle file).</param>
+/// <param name="Note">Something worth telling the committee, e.g. why a fall-back recorder was used.</param>
+public sealed record VideoStarted(bool HasSound, bool HasOverlay, string? Note = null);
+
+/// <summary>Records video (and, if wanted, sound) to a file — the video of a start, from the last minute to All Clear.</summary>
+public interface IVideoRecorder
+{
+    bool IsRecording { get; }
+
+    /// <summary>Switches the camera (and microphone) on ahead of time, so <see cref="StartAsync"/> begins at once. Never throws.</summary>
+    Task PrepareAsync(string? videoDeviceId, string? audioDeviceId, bool withSound);
+
+    /// <summary>
+    /// Starts recording to <paramref name="filePath"/> with the camera (and microphone) chosen in Settings, or the
+    /// defaults, drawing <paramref name="overlay"/> on the picture if the recorder can. Returns once recording has begun,
+    /// saying whether sound and the overlay are really there. Throws <see cref="InvalidOperationException"/> with a
+    /// readable reason when recording cannot start.
+    /// </summary>
+    Task<VideoStarted> StartAsync(string filePath, string? videoDeviceId, string? audioDeviceId, bool withSound, VideoOverlay? overlay);
+
+    /// <summary>Stops and finalises the file. Throws <see cref="InvalidOperationException"/> if it may be incomplete.</summary>
+    Task StopAsync();
+
+    /// <summary>Switches off a camera prepared but not used. Never throws; does nothing while recording.</summary>
+    Task ReleaseAsync();
+}

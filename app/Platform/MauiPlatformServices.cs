@@ -177,3 +177,21 @@ public sealed class MauiCameraService : ICameraService
 
     public Task ReleaseAsync() => Task.CompletedTask;
 }
+
+/// <summary>
+/// Phones and tablets record video through the system camera app, which the person stops by hand — it cannot run from
+/// the start sequence until All Clear. Use the Windows or Linux committee app for the start video.
+/// </summary>
+public sealed class MauiUnsupportedVideoRecorder : IVideoRecorder
+{
+    public bool IsRecording => false;
+
+    public Task PrepareAsync(string? videoDeviceId, string? audioDeviceId, bool withSound) => Task.CompletedTask;
+
+    public Task<VideoStarted> StartAsync(string filePath, string? videoDeviceId, string? audioDeviceId, bool withSound, VideoOverlay? overlay) =>
+        throw new InvalidOperationException("the start video is recorded by the Windows and Linux versions of the app, not on a phone or tablet");
+
+    public Task StopAsync() => Task.CompletedTask;
+
+    public Task ReleaseAsync() => Task.CompletedTask;
+}

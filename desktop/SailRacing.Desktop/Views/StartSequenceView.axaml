@@ -59,6 +59,18 @@
 			        IsVisible="{Binding CanCancelSequence}" HorizontalAlignment="Center"
 			        ToolTip.Tip="Abandon this start sequence (postponement or recall): the countdown stops, the flags come down and you can begin again" />
 
+			<!-- The video of the start: recorded from the last minute before the start until All Clear. -->
+			<StackPanel Spacing="6" HorizontalAlignment="Center" IsVisible="{Binding !IsRaceRunning}">
+				<TextBlock Text="{Binding VideoStatusText}" FontSize="13" Foreground="Gray" HorizontalAlignment="Center"
+				           TextWrapping="Wrap" IsVisible="{Binding HasVideoStatus}" />
+				<StackPanel Classes="row" HorizontalAlignment="Center">
+					<Button Content="{Binding VideoButtonText}" Command="{Binding ToggleStartVideoCommand}"
+					        ToolTip.Tip="The start video begins one minute before the start and runs until you press All Clear. It is recorded with the camera and microphone chosen in Settings and saved under Documents/Sail-Racing videos. This button records right now, or stops the recording." />
+					<Button Content="Open video" IsVisible="{Binding HasStartVideo}" Command="{Binding OpenStartVideoCommand}"
+					        ToolTip.Tip="Play the video of this race's start" />
+				</StackPanel>
+			</StackPanel>
+
 			<!-- Competitor links stay available here once the race is launched. -->
 			<StackPanel Spacing="6" Margin="0,16,0,0">
 				<TextBlock Text="Competitor links" Classes="bold" />

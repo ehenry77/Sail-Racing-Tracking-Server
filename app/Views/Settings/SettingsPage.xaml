@@ -64,6 +64,18 @@
             <Label Text="With this on, the camera is switched on while the Timing Sheet is open, so its light will be lit. Photos are saved on this PC and are not sent to the server."
                    FontSize="12" TextColor="Gray" />
 
+            <HorizontalStackLayout Spacing="8">
+                <CheckBox IsChecked="{Binding RecordStartVideo}" />
+                <Label Text="Record a video of each start, from one minute before the start until All Clear" VerticalOptions="Center"
+                       ToolTipProperties.Text="The start video begins one minute before the start and runs until you press All Clear. It is recorded with the camera and microphone chosen in Settings and saved under Documents/Sail-Racing videos. You can also start or stop it by hand on the Start Sequence screen." />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="8" Margin="32,0,0,0" IsVisible="{Binding RecordStartVideo}">
+                <CheckBox IsChecked="{Binding RecordStartVideoSound}" />
+                <Label Text="Include the sound from the microphone chosen above" VerticalOptions="Center" />
+            </HorizontalStackLayout>
+            <Label Text="Videos are saved on this PC, not sent to the server. The camera and microphone are on while recording, and the start announcements will be on the sound. The 24-hour time and GPS position are drawn on the picture when ffmpeg is installed (in a terminal: winget install Gyan.FFmpeg, then restart the app); without it the video is recorded without them on the picture. Either way a .srt subtitle file beside the video has them for every second."
+                   FontSize="12" TextColor="Gray" />
+
             <Label Text="GPS sensor (Windows only)" FontAttributes="Bold" />
             <Picker ItemsSource="{Binding GpsSensors}" SelectedItem="{Binding SelectedGpsSensor}">
                 <Picker.ItemDisplayBinding>

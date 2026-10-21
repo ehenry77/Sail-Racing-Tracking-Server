@@ -47,10 +47,14 @@ public static class MauiProgram
         // Per-platform pieces the core needs.
 #if WINDOWS
         builder.Services.AddSingleton<ISpeechService, WindowsSpeechService>();
-        builder.Services.AddSingleton<ICameraService, WindowsCameraService>();
+        // One object for photos and video, so both share the one open camera.
+        builder.Services.AddSingleton<WindowsCameraService>();
+        builder.Services.AddSingleton<ICameraService>(sp => sp.GetRequiredService<WindowsCameraService>());
+        builder.Services.AddSingleton<IVideoRecorder, WindowsVideoRecorder>();
 #else
         builder.Services.AddSingleton<ISpeechService, MauiTextSpeechService>();
         builder.Services.AddSingleton<ICameraService, MauiCameraService>();
+        builder.Services.AddSingleton<IVideoRecorder, MauiUnsupportedVideoRecorder>();
 #endif
         builder.Services.AddSingleton<IDeviceSettingsService, DeviceSettingsService>();
 

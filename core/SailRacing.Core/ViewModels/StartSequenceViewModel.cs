@@ -14,10 +14,16 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
     private readonly IStartSequenceService _sequence;
     private readonly ISailRacingApiClient _api;
     private readonly IRaceSyncService _sync;
+    private readonly IStartVideoService _video;
     private readonly JoinCodeWatcher _joinWatcher;
 
     private Race? _race;
+
+    // Where the race is, for the GPS stamp on the video when this PC has no location of its own.
+    private GeoFix? _raceLocation;
+    private string _raceLocationLabel = string.Empty;
     private IUiTimer? _preStartTimer;
+    private IUiTimer? _videoTimer;
 
     public string? RaceId { get; set; }
 
@@ -46,6 +52,33 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
 
     [ObservableProperty]
     private bool isSequenceComplete;
+
+    // ----- the video of the start: recorded from the last minute before the start until All Clear -----
+
+    /// <summary>This race's video is being recorded right now.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VideoButtonText))]
+    private bool isRecordingVideo;
+
+    /// <summary>This race's video is waiting for the last minute to begin.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VideoButtonText))]
+    private bool isVideoScheduled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVideoStatus))]
+    private string videoStatusText = string.Empty;
+
+    /// <summary>The finished video of this race's start, if there is one.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStartVideo))]
+    private string? startVideoPath;
+
+    public bool HasVideoStatus => !string.IsNullOrEmpty(VideoStatusText);
+
+    public bool HasStartVideo => !string.IsNullOrEmpty(StartVideoPath);
+
+    public string VideoButtonText => IsRecordingVideo ? "Stop recording" : IsVideoScheduled ? "Cancel the video" : "Record video now";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanCancelSequence))]
@@ -77,8 +110,10 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
         IStartSequenceService sequence,
         ISailRacingApiClient api,
         IRaceSyncService sync,
+        IStartVideoService video,
         IUiServices ui) : base(ui)
     {
+        _video = video;
         _races = races;
         _participants = participants;
         _sequence = sequence;
@@ -95,6 +130,8 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
         // keeps running — a stale view model must not stay subscribed to it.
         _sequence.StatusChanged -= OnStatusChanged;
         _sequence.StatusChanged += OnStatusChanged;
+        _video.StateChanged -= OnVideoStateChanged;
+        _video.StateChanged += OnVideoStateChanged;
 
         if (string.IsNullOrEmpty(RaceId))
         {
@@ -103,20 +140,38 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
 
         var aggregate = await _races.GetAggregateAsync(RaceId);
         _race = aggregate?.Race;
+        if (aggregate is not null)
+        {
+            (_raceLocation, _raceLocationLabel) = RaceLocation.Of(aggregate);
+        }
+
         IsRaceRunning = _race?.Status is RaceStatus.Racing or RaceStatus.Finished;
         await LoadLinksAsync(aggregate);
+        StartVideoPath = _race?.StartVideoPath;
 
         if (_race?.StartAt is not null)
         {
             IsSequenceStarted = true;
             StartAtText = FormatStartAt(_race.StartAt.Value);
             _sequence.Start(_race.StartAt.Value, _race.Id);
+
+            // Back on this screen (or the app was restarted) with the sequence still ahead of the start: make sure the
+            // video is lined up for the last minute. If it is already recording or waiting, nothing changes.
+            if (AppConfig.RecordStartVideo
+                && _race.Status == RaceStatus.StartSequence
+                && _race.StartAt.Value > DateTimeOffset.UtcNow
+                && !_video.IsRecording && !_video.IsScheduled)
+            {
+                _video.Schedule(_race.Id, _race.Name, _race.StartAt.Value, _raceLocation, _raceLocationLabel);
+            }
         }
         else
         {
             HasScheduledStartTime = _race?.ScheduledStartTime is not null;
             StartPreStartTimer();
         }
+
+        RefreshVideoState();
     }
 
     private async Task LoadLinksAsync(RaceAggregate? aggregate)
@@ -261,6 +316,12 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
         StartAtText = FormatStartAt(startAt);
         _sequence.Start(startAt, raceId);
 
+        // The video of the start: switched on shortly before the last minute, and recording until All Clear.
+        if (AppConfig.RecordStartVideo)
+        {
+            _video.Schedule(raceId, _race.Name, startAt, _raceLocation, _raceLocationLabel);
+        }
+
         // Fire-and-forget: the sequence itself runs entirely off the locally-persisted StartAt and
         // must never wait on the network — a down server just means it catches up next time the
         // race syncs (RaceSyncService's connectivity watcher retries automatically).
@@ -295,6 +356,10 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
         }
 
         var raceId = _race.Id;
+
+        // The video ends at the moment of All Clear. Finishing the file takes a moment, so don't wait for it.
+        _ = _video.StopAsync();
+
         await SaveOwnedFieldsAsync(r => r.Status = RaceStatus.Racing);
 
         // Fire-and-forget: the committee must be able to move into Race Mode immediately regardless
@@ -329,6 +394,9 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
 
         _sequence.Cancel();
 
+        // A video that was waiting for the last minute is dropped; one already recording is stopped and kept.
+        _ = _video.StopAsync();
+
         var raceId = _race.Id;
         await SaveOwnedFieldsAsync(r =>
         {
@@ -348,6 +416,85 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
         // Fire-and-forget like every other server call: the cancel is already effective locally, and
         // PushAsync marks the race for retry if the server can't be reached right now.
         _ = SafeCallAsync(() => _sync.PushAsync(raceId));
+    }
+
+    /// <summary>The manual button: start recording now, or stop (or cancel the waiting) recording.</summary>
+    [RelayCommand]
+    private async Task ToggleStartVideoAsync()
+    {
+        if (_race is null)
+        {
+            return;
+        }
+
+        if (_video.IsRecording || _video.IsScheduled)
+        {
+            await _video.StopAsync();
+        }
+        else
+        {
+            await _video.StartAsync(_race.Id, _race.Name, _raceLocation, _raceLocationLabel);
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenStartVideoAsync()
+    {
+        if (StartVideoPath is { } path && File.Exists(path))
+        {
+            await Ui.Launcher.OpenFileAsync(path);
+        }
+        else
+        {
+            VideoStatusText = "That video file is no longer there.";
+        }
+    }
+
+    private void OnVideoStateChanged(object? sender, EventArgs e) => Ui.Dispatcher.Post(RefreshVideoState);
+
+    /// <summary>Brings the video line and buttons in step with the service (and ticks the recording clock).</summary>
+    private void RefreshVideoState()
+    {
+        var raceId = RaceId;
+        IsRecordingVideo = raceId is not null && _video.IsRecording && _video.RaceId == raceId;
+        IsVideoScheduled = raceId is not null && _video.IsScheduled && _video.ScheduledRaceId == raceId;
+
+        if (raceId is not null && _video.LastRaceId == raceId && !string.IsNullOrEmpty(_video.LastFile))
+        {
+            StartVideoPath = _video.LastFile;
+        }
+
+        if (IsRecordingVideo)
+        {
+            var elapsed = DateTimeOffset.Now - (_video.StartedAt ?? DateTimeOffset.Now);
+            VideoStatusText = $"● Recording the start  {(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}" + (_video.HasSound ? "" : "  (no sound)") + (_video.HasOverlay ? "" : "  (time and GPS in the subtitle file only)");
+        }
+        else if (IsVideoScheduled && _video.RecordingStartsAt is { } startsAt)
+        {
+            VideoStatusText = $"Video: recording starts at {startsAt.ToLocalTime():HH:mm:ss}, one minute before the start";
+        }
+        else if (raceId is not null && _video.MessageRaceId == raceId)
+        {
+            VideoStatusText = _video.LastMessage;
+        }
+        else
+        {
+            VideoStatusText = string.Empty;
+        }
+
+        // A clock only needs ticking while a video is recording or waiting.
+        if ((IsRecordingVideo || IsVideoScheduled) && _videoTimer is null)
+        {
+            _videoTimer = Ui.Dispatcher.CreateTimer();
+            _videoTimer.Interval = TimeSpan.FromSeconds(1);
+            _videoTimer.Tick += (_, _) => RefreshVideoState();
+            _videoTimer.Start();
+        }
+        else if (!IsRecordingVideo && !IsVideoScheduled && _videoTimer is not null)
+        {
+            _videoTimer.Stop();
+            _videoTimer = null;
+        }
     }
 
     private static async Task SafeCallAsync(Func<Task> call)
@@ -397,6 +544,9 @@ public partial class StartSequenceViewModel : RaceViewModelBase, IHasRaceId, IDi
     public void OnDisappearing()
     {
         _sequence.StatusChanged -= OnStatusChanged;
+        _video.StateChanged -= OnVideoStateChanged;
+        _videoTimer?.Stop();
+        _videoTimer = null;
         StopPreStartTimer();
         _joinWatcher.Stop();
     }

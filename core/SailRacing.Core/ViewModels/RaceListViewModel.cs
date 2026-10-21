@@ -13,6 +13,7 @@ public partial class RaceListViewModel : BaseViewModel
     private readonly IRaceTakeOverService _takeOver;
     private readonly IStartSequenceService _sequence;
     private readonly TimingOutbox _timingOutbox;
+    private readonly IStartVideoService _video;
 
     public ObservableCollection<RaceListItem> Races { get; } = new();
 
@@ -24,8 +25,10 @@ public partial class RaceListViewModel : BaseViewModel
         IRaceTakeOverService takeOver,
         IStartSequenceService sequence,
         TimingOutbox timingOutbox,
+        IStartVideoService video,
         IUiServices ui) : base(ui)
     {
+        _video = video;
         _races = races;
         _takeOver = takeOver;
         _sequence = sequence;
@@ -146,6 +149,11 @@ public partial class RaceListViewModel : BaseViewModel
             if (_sequence.RaceId == race.Id && _sequence.IsRunning)
             {
                 _sequence.Cancel();
+            }
+
+            if (_video.IsRecording && _video.RaceId == race.Id)
+            {
+                await _video.StopAsync();
             }
 
             await _timingOutbox.RemoveRaceAsync(race.Id);

@@ -11,7 +11,7 @@ namespace SailRacing.Core.Tests;
 
 /// <summary>Stand-ins for the platform services each app provides.</summary>
 internal sealed class StubPlatform : INavigator, IDialogService, IClipboardService, ILauncherService, IFileService,
-    IGeolocationService, IAppPaths, IConnectivityService, IUiDispatcher, ISpeechService, IDeviceSettingsService, ICameraService
+    IGeolocationService, IAppPaths, IConnectivityService, IUiDispatcher, ISpeechService, IDeviceSettingsService, ICameraService, IVideoRecorder
 {
     public StubPlatform(string dataDirectory) => DataDirectory = dataDirectory;
 
@@ -30,6 +30,10 @@ internal sealed class StubPlatform : INavigator, IDialogService, IClipboardServi
     public Task WarmUpAsync(string? deviceId) => Task.CompletedTask;
     public Task<byte[]> CaptureJpegAsync(string? deviceId) => Task.FromResult(Array.Empty<byte>());
     public Task ReleaseAsync() => Task.CompletedTask;
+    public bool IsRecording => false;
+    public Task PrepareAsync(string? videoDeviceId, string? audioDeviceId, bool withSound) => Task.CompletedTask;
+    public Task<VideoStarted> StartAsync(string filePath, string? videoDeviceId, string? audioDeviceId, bool withSound, VideoOverlay? overlay) => Task.FromResult(new VideoStarted(false, false));
+    public Task StopAsync() => Task.CompletedTask;
     public Task ShareFileAsync(string title, string path) => Task.CompletedTask;
     public Task<PickedTextFile?> PickTextFileAsync(string title, params string[] extensions) => Task.FromResult<PickedTextFile?>(null);
     public Task<GeoFix?> GetLocationAsync(TimeSpan timeout) => Task.FromResult<GeoFix?>(null);
@@ -67,6 +71,7 @@ public class CompositionTests
         services.AddSingleton<ISpeechService>(platform);
         services.AddSingleton<IDeviceSettingsService>(platform);
         services.AddSingleton<ICameraService>(platform);
+        services.AddSingleton<IVideoRecorder>(platform);
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
@@ -74,7 +79,7 @@ public class CompositionTests
         {
             typeof(CompetitorsViewModel), typeof(FleetsViewModel), typeof(RaceListViewModel), typeof(RaceSetupViewModel),
             typeof(StartSequenceViewModel), typeof(TimingSheetViewModel), typeof(ResultsViewModel), typeof(SettingsViewModel),
-            typeof(IRaceSyncService), typeof(IRaceTakeOverService), typeof(IStartSequenceService), typeof(IFinishPhotoService)
+            typeof(IRaceSyncService), typeof(IRaceTakeOverService), typeof(IStartSequenceService), typeof(IFinishPhotoService), typeof(IStartVideoService)
         })
         {
             Assert.NotNull(provider.GetRequiredService(type));

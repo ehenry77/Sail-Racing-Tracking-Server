@@ -106,17 +106,7 @@ public sealed class FinishPhotoService : IFinishPhotoService
         }
     }
 
-    // The same on every system, so a photos folder copied from a Linux PC to a Windows one (or onto a USB stick)
-    // still opens: the characters Windows forbids in a file name are replaced everywhere, not just on Windows.
-    private static readonly char[] ForbiddenInNames = { '<', '>', ':', '"', '/', (char)92, '|', '?', '*' }; // 92 is the backslash
-
-    private static string SafeName(string name, string fallback)
-    {
-        var trimmed = string.IsNullOrWhiteSpace(name) ? fallback : name.Trim();
-        var cleaned = string.Concat(trimmed.Select(c => char.IsControl(c) || ForbiddenInNames.Contains(c) ? '_' : c))
-            .TrimEnd('.', ' '); // Windows drops trailing dots and spaces
-        return cleaned.Length == 0 ? fallback : cleaned;
-    }
+    private static string SafeName(string name, string fallback) => SafeFileName.Of(name, fallback);
 }
 
 /// <summary>The words stamped on a photo. Times are always 24-hour, whatever the PC's regional setting.</summary>
@@ -126,8 +116,12 @@ public static class PhotoStamp
     {
         $"{request.BoatName}  —  {request.RaceName}",
         $"{(request.IsFinish ? "FINISH" : "PHOTO")}   {FormatTimestamp(takenAt)}   laps {request.LapsCompleted}/{request.Laps}",
-        fix is null ? "GPS: not available" : $"GPS: {FormatCoordinates(fix.Latitude, fix.Longitude)}  ({fixLabel})"
+        GpsLine(fix, fixLabel)
     };
+
+    /// <summary>"GPS: 46.45400° N, 6.55150° E  (finish line)", or that there is no position.</summary>
+    public static string GpsLine(GeoFix? fix, string label) =>
+        fix is null ? "GPS: not available" : $"GPS: {FormatCoordinates(fix.Latitude, fix.Longitude)}  ({label})";
 
     /// <summary>"2026-10-20 14:32:05 (UTC+02:00)" — date, 24-hour time with seconds, and the offset it is local to.</summary>
     public static string FormatTimestamp(DateTimeOffset at)

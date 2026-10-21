@@ -82,6 +82,31 @@ Each boat row also has a **Take photo** button for a photo by hand, and **View p
 
 All times shown in the apps are 24-hour (the time pickers too), and so is the clock on the replay page.
 
+## Video of the start
+
+The committee app can record a video of each start. Switch it on in **Settings → Record a video of each start, from one
+minute before the start until All Clear**, and choose whether the microphone's sound is included (the camera and
+microphone are the ones chosen under "Video input" / "Audio input").
+
+- Pressing **Begin Start Sequence** lines the video up: the camera is switched on a few seconds before the last minute and
+  recording begins about 3 s before **T-1:00**, so the whole last minute is on it. It stops the moment **All Clear** is
+  pressed. If less than a minute is left when the sequence begins, it starts at once.
+- It carries on if you leave the Start Sequence screen, and a **Record video now / Stop recording** button on that screen
+  starts or stops it by hand. Cancelling the sequence stops and keeps a recording that has begun, and drops one still waiting.
+- Videos are MP4 files in `Documents/Sail-Racing videos/<race>/<race> start yyyyMMdd-HHmmss.mp4` and are not sent to the
+  server; **Open video** on the Start Sequence screen plays the last one. (The finish photos are saved the same way.)
+- **Time and GPS on the picture.** Like the photos, the video is stamped along the bottom: the race and "START", the date and
+  **24-hour** time to the second with the UTC offset (a live clock), and the GPS position — this PC's own when it has one
+  (Windows; asked for every 10 s, so it follows the boat), otherwise the finish line. Drawing on the picture needs
+  **ffmpeg**: on Windows run `winget install Gyan.FFmpeg` in a terminal (then restart the app; the app also finds it in
+  `%LOCALAPPDATA%\SailRacing\ffmpeg\` or next to the program, or where the `SAILRACING_FFMPEG` variable points), on Linux
+  `sudo apt install ffmpeg`. Without ffmpeg (or with a build that has no `drawtext` filter) Windows records with its own
+  camera interface and the video has no text on the picture; the app says so. In every case a **`.srt` subtitle file** with
+  the same name sits beside the video, with the time and GPS for every second — VLC shows it over the video automatically.
+- ffmpeg records at the camera's default size. Linux needs the microphone to be reachable through PulseAudio/PipeWire; if
+  the microphone cannot be opened, the picture is recorded alone and the app says so. Phones and tablets cannot record a
+  start video.
+
 ## Tests
 
 ```bash

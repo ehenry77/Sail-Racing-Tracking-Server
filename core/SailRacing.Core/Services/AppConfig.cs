@@ -33,6 +33,23 @@ public static class AppConfig
         set => Store.Set(AutoFinishPhotoKey, value ? "1" : "0");
     }
 
+    private const string RecordStartVideoKey = "RecordStartVideo";
+    private const string RecordStartVideoSoundKey = "RecordStartVideoSound";
+
+    /// <summary>Record a video of each start, from Begin Start Sequence until All Clear (off until switched on in Settings).</summary>
+    public static bool RecordStartVideo
+    {
+        get => Store.Get(RecordStartVideoKey) == "1";
+        set => Store.Set(RecordStartVideoKey, value ? "1" : "0");
+    }
+
+    /// <summary>Include the microphone's sound in the start video (on unless switched off).</summary>
+    public static bool RecordStartVideoSound
+    {
+        get => Store.Get(RecordStartVideoSoundKey) != "0";
+        set => Store.Set(RecordStartVideoSoundKey, value ? "1" : "0");
+    }
+
     public static string ServerBaseUrl
     {
         get => (Store.Get(ServerBaseUrlKey) ?? DefaultServerBaseUrl);

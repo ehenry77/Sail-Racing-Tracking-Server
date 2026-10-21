@@ -183,7 +183,7 @@ public partial class TimingSheetViewModel : RaceViewModelBase, IHasRaceId, IDisp
             }
 
             _race = aggregate.Race;
-            (_raceLocation, _raceLocationLabel) = FinishLocationOf(aggregate);
+            (_raceLocation, _raceLocationLabel) = RaceLocation.Of(aggregate);
             MapUrl = JoinLinks.BuildMap(_race.JoinCode);
             ReplayUrl = JoinLinks.BuildReplay(_race.JoinCode);
             ShowRace(_race.Name, _race.JoinCode);
@@ -460,26 +460,6 @@ public partial class TimingSheetViewModel : RaceViewModelBase, IHasRaceId, IDisp
         entry.LapsCompleted = Math.Max(entry.LapsCompleted, entry.Laps);
         entry.FinishTime = finishAtUtc;
         entry.ElapsedSeconds = _race?.StartAt is { } startAt ? (finishAtUtc - startAt).TotalSeconds : null;
-    }
-
-    /// <summary>The finish line's position, for the GPS stamp: the finish point if it is separate from the start
-    /// line, otherwise the middle of the start/finish line.</summary>
-    private static (GeoFix? Location, string Label) FinishLocationOf(RaceAggregate aggregate)
-    {
-        var race = aggregate.Race;
-        if (!race.FinishSameAsStart && race.FinishLatitude is { } fLat && race.FinishLongitude is { } fLon)
-        {
-            return (new GeoFix(fLat, fLon), "finish point");
-        }
-
-        var line = aggregate.StartLine;
-        if (line.CommitteeLatitude is { } cLat && line.CommitteeLongitude is { } cLon
-            && line.PinLatitude is { } pLat && line.PinLongitude is { } pLon)
-        {
-            return (new GeoFix((cLat + pLat) / 2, (cLon + pLon) / 2), "finish line");
-        }
-
-        return (null, string.Empty);
     }
 
     /// <summary>Photographs a boat as it finishes — when that is switched on in Settings and it has no photo yet.</summary>

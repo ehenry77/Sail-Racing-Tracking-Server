@@ -27,6 +27,19 @@ public partial class App : Application
             var window = new MainWindow(Services.GetRequiredService<ScreenFactory>(), Services.GetRequiredService<ShellNavigator>());
             DesktopHost.MainWindow = window;
             desktop.MainWindow = window;
+
+            // Closing the app while a start video is being recorded: finish the file properly rather than cut it off.
+            desktop.Exit += (_, _) =>
+            {
+                try
+                {
+                    Task.Run(() => Services.GetRequiredService<IStartVideoService>().StopAsync()).Wait(TimeSpan.FromSeconds(10));
+                }
+                catch
+                {
+                    // exiting anyway
+                }
+            };
             System.Diagnostics.Trace.WriteLine("SailRacing: main window created");
 
             // Retry anything queued (races, manual timing) whenever the network comes back.
@@ -57,6 +70,7 @@ public partial class App : Application
         services.AddSingleton<ISpeechService, ProcessSpeechService>();
         services.AddSingleton<IDeviceSettingsService, DesktopDeviceSettingsService>();
         services.AddSingleton<ICameraService, DesktopCameraService>();
+        services.AddSingleton<IVideoRecorder>(_ => new FfmpegVideoRecorder(FfmpegCapture.ForCurrentOs()));
 
         services.AddSailRacingCore();
         services.AddSingleton<ScreenFactory>();

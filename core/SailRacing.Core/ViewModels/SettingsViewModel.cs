@@ -37,6 +37,14 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty]
     private bool autoFinishPhoto;
 
+    /// <summary>Record a video of each start, from Begin Start Sequence until All Clear.</summary>
+    [ObservableProperty]
+    private bool recordStartVideo;
+
+    /// <summary>Include the microphone's sound in that video.</summary>
+    [ObservableProperty]
+    private bool recordStartVideoSound = true;
+
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
@@ -106,6 +114,8 @@ public partial class SettingsViewModel : BaseViewModel
         {
             ServerBaseUrlText = AppConfig.ServerBaseUrl;
             AutoFinishPhoto = AppConfig.AutoFinishPhoto;
+            RecordStartVideo = AppConfig.RecordStartVideo;
+            RecordStartVideoSound = AppConfig.RecordStartVideoSound;
             SequenceAlarmsText = AppConfig.SequenceAlarmsText;
             SequenceCountdownText = AppConfig.SequenceCountdownText;
             SequenceSignalsText = AppConfig.SequenceSignalsText;
@@ -166,6 +176,8 @@ public partial class SettingsViewModel : BaseViewModel
             : ServerBaseUrlText.Trim();
 
         AppConfig.AutoFinishPhoto = AutoFinishPhoto;
+        AppConfig.RecordStartVideo = RecordStartVideo;
+        AppConfig.RecordStartVideoSound = RecordStartVideoSound;
 
         AppConfig.PreferredAudioOutputDevice = (SelectedAudioOutputDevice?.Id, SelectedAudioOutputDevice?.Name);
         AppConfig.PreferredAudioInputDevice = (SelectedAudioInputDevice?.Id, SelectedAudioInputDevice?.Name);

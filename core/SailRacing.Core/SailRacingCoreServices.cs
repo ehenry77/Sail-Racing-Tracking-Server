@@ -34,6 +34,7 @@ public static class SailRacingCoreServices
         services.AddSingleton<IRaceSyncService, RaceSyncService>();
         services.AddSingleton<IRaceTakeOverService, RaceTakeOverService>();
         services.AddSingleton<IFinishPhotoService, FinishPhotoService>();
+        services.AddSingleton<IStartVideoService, StartVideoService>();
         // Singleton: one start sequence runs at a time, and it must survive leaving/re-entering the page.
         // Transient would let a re-entered page start a second timer while the first keeps announcing.
         services.AddSingleton<IStartSequenceService, StartSequenceService>();

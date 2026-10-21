@@ -46,6 +46,9 @@ public class Race
 
     public DateTimeOffset? ShortenCourseAppliedAt { get; set; }
 
+    /// <summary>The video recorded of this race's start (a file on this PC). Never sent to the server.</summary>
+    public string? StartVideoPath { get; set; }
+
     public bool FinishSameAsStart { get; set; } = true;
 
     public double? FinishLatitude { get; set; }
